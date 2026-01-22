@@ -38,7 +38,7 @@ type DBController struct {
 
 func (dbc *DBController) ConnectDB() error {
 	dsn := fmt.Sprintf(
-		"host=%v user=languasia password=1234 dbname=languasia port=5432 sslmode=disable TimeZone=Asia/Shanghai",
+		"host=%v user=languasia password=1234 dbname=languasia port=5432 sslmode=disable",
 		os.Getenv("DB_HOST"),
 	)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    container_name: languasia-app
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: "database"
+    networks:
+      - languasia-network
+    depends_on:
+      - database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  database:
+    image: postgres:16-alpine
+    container_name: languasia-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_USER: "languasia"
+      POSTGRES_DB: "languasia"
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - languasia-network
+    restart: unless-stopped
+
+networks:
+  languasia-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+

@@ -12,9 +12,15 @@ import (
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/gorilla/websocket"
 )
 
 var dbc *DBController
+
+var upgrader = websocket.Upgrader{
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
+}
 
 func main() {
 	// database
@@ -39,6 +45,10 @@ func main() {
 	e.POST("/login", login)
 
 	e.POST("/refresh", refresh)
+
+	e.POST("/users", recieveFilteredUsers)
+
+	e.POST("/ws", connectWebSocket)
   
 	if err := e.Start(":8080"); err != nil {
     slog.Error("failed to start server", "error", err)
@@ -176,5 +186,32 @@ func refresh(c *echo.Context) error {
 		"refresh_token": user.RefreshToken,
 		"jwt_token": jwt_token_string,
 	})
+}
+
+func recieveFilteredUsers(c *echo.Context) error {
+	filter := new(UserFilter)
+
+	if err := c.Bind(filter); err != nil {
+		return err
+	}
+
+	users, err := dbc.RecieveFilteredUsers(filter)
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusFound, users)
+}
+
+func connectWebSocket(c *echo.Context) error {
+	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+
+	if err != nil {
+		return err
+	}
+	defer ws.Close()
+
+	return nil
 }
 

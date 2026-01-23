@@ -66,10 +66,9 @@ func (dbc *DBController) LoginUser(user *User) error {
 	).First(user).Error
 }
 
-func (dbc *DBController) UpdateRefreshToken(user *User) error {
+func (dbc *DBController) UserByRefreshToken(user *User) error {
 	return dbc.db.Raw(
-		"UPDATE users SET refresh_token = ? WHERE refresh_token = ? RETURNING *",
-		GenerateRefreshToken(),
+		"SELECT * FRM users where refresh_token = ?",
 		user.RefreshToken,
 	).First(user).Error
 }

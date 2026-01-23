@@ -149,7 +149,7 @@ func refresh(c *echo.Context) error {
 	user := &User{
 		RefreshToken: request.RefreshToken,
 	}
-	err := dbc.UpdateRefreshToken(user)
+	err := dbc.UserByRefreshToken(user)
 	if err != nil {
 		c.String(http.StatusUnauthorized, "Not valid refresh token")
 		return err

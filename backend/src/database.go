@@ -15,16 +15,6 @@ var dbc *DBController
 
 const RefreshTokenLength = 256;
 
-type Language struct {
-	LanguageId uint64
-	Name string
-}
-
-type Hobby struct {
-	HobbyId uint64
-	Title string
-}
-
 type User struct {
 	UserId uint64 `gorm:"primaryKey"`
 	Username string
@@ -76,7 +66,7 @@ func (dbc *DBController) UserByRefreshToken(user *User) error {
 }
 
 type UserFilter struct {
-	NameContains string `json:"name_contains"`
+	UsernameContains string `json:"username_contains"`
 	HobbieIds []string `json:"hobbies"`
 	KnownLanguageIds []string `json:"known_languages"`
 	LearnLanguageIds []string `json:"learn_languages"`
@@ -122,7 +112,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 				WHERE ul.user_id = u.user_id AND ul.is_known = false
 		) ll ON true
 		WHERE u.username ILIKE '%%%v%%'
-	`, filter.NameContains)
+	`, filter.UsernameContains)
 
 	if len(filter.HobbieIds) > 0 {
 		query += fmt.Sprintf(`
@@ -166,11 +156,73 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 
 func (dbc *DBController) UpdadateUser(user *User) error {
 	query := "UPDATE users "
-	var args []string
-	if user.PasswordHash != nil && len(user.PasswordHash) != 0 {
-		query += "SET password_hash = ? "
-		args = append(args, user.PasswordHash)
+	var args []any
+	
+	if user.Description != "" || len(user.PasswordHash) != 0 {
+		query += "SET "
 	}
-	args += ""
-	dbc.db.Exec("UPDATE users SET password_hash = ?", user.PasswordHash)
+
+	if len(user.PasswordHash) != 0 {
+		query += "password_hash = ? "
+		args = append(args, user.PasswordHash)
+		if user.Description != "" {
+			query += ", "
+		}
+	}
+	
+	if user.Description != "" {
+		query += "description = ? "
+		args = append(args, user.Description)
+	}
+
+	query += "WHERE user_id = ?"
+	args = append(args, user.UserId)
+	return dbc.db.Exec(query, args...).Error
 }
+
+func (dbc *DBController) DeleteLanguage(userId, languageId uint64) error {
+	return dbc.db.Exec("DELETE FROM user_languages WHERE user_id = ? AND language_id = ?", userId, languageId).Error
+}
+
+type Language struct {
+	LanguageId uint64 `json:"language_id"`
+	UserId uint64
+	IsKnown bool `json:"is_known"`
+}
+
+func (dbc *DBController) AddLanguage(language *Language) error {
+	return dbc.db.Exec(
+		"INSERT INTO user_languages (user_id, language_id, is_known) VALUES (?, ?, ?)",
+		language.UserId,
+		language.LanguageId,
+		language.IsKnown,
+	).Error
+}
+
+func (dbc *DBController) DeleteHobby(userId, hobbyId uint64) error {
+	return dbc.db.Exec("DELETE FROM user_hobbies WHERE user_id = ? AND hobby_id = ?", userId, hobbyId).Error
+}
+
+type Hobby struct {
+	HobbyId uint64 `json:"hobby_id"`
+	UserId uint64
+}
+
+func (dbc *DBController) AddHobby(hobby *Hobby) error {
+	return dbc.db.Exec(
+		"INSERT INTO user_languages (user_id, hobby_id) VALUES (?, ?, ?)",
+		hobby.UserId,
+		hobby.HobbyId,
+	).Error
+}
+
+func (dbc *DBController) DeleteUser(userId uint64) error {
+	res := dbc.db.Exec("DELETE FROM users WHERE user_id = ?", userId)
+	
+	if res.RowsAffected != 1 {
+		return gorm.ErrRecordNotFound
+	}
+
+	return res.Error
+}
+

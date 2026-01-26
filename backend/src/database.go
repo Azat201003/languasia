@@ -11,6 +11,8 @@ import (
 	"github.com/lib/pq"
 )
 
+var dbc *DBController
+
 const RefreshTokenLength = 256;
 
 type Language struct {

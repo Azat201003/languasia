@@ -162,3 +162,13 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 	return result, err
 }
 
+func (dbc *DBController) UpdadateUser(user *User) error {
+	query := "UPDATE users "
+	var args []string
+	if user.PasswordHash != nil && len(user.PasswordHash) != 0 {
+		query += "SET password_hash = ? "
+		args = append(args, user.PasswordHash)
+	}
+	args += ""
+	dbc.db.Exec("UPDATE users SET password_hash = ?", user.PasswordHash)
+}

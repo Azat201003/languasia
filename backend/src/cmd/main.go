@@ -2,19 +2,22 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	"log/slog"
-	"net/http"
-	
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+
+	"github.com/Azat201003/languasia/backend/src/database"
+	"github.com/Azat201003/languasia/backend/src/websocket"
 )
 
 func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func (c *echo.Context) (err error) {
+	return func(c *echo.Context) (err error) {
 		defer next(c)
 		tokenString := strings.TrimPrefix(c.Request().Header.Get("Authorization"), "Bearer ")
 
@@ -27,7 +30,7 @@ func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			return jwt.ParseEdPublicKeyFromPEM(publicKey)
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
-		
+
 		if err != nil {
 			return err
 		}
@@ -49,26 +52,29 @@ func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+var wsh *websocket.WebSocketHub
+var dbc *database.DBController
+
 func main() {
 	// database
-	dbc = new(DBController)
-	
+	dbc = new(database.DBController)
+
 	if err := dbc.ConnectDB(); err != nil {
 		panic(err)
 	}
 
 	// web socket
-	wsh = NewHub()
+	wsh = websocket.NewHub()
 	go wsh.Run()
 
 	// server
-  e := echo.New()
+	e := echo.New()
 
-  e.Use(middleware.RequestLogger())
-  e.Use(middleware.Recover())
+	e.Use(middleware.RequestLogger())
+	e.Use(middleware.Recover())
 	e.Use(authMiddlware)
 
-  e.GET("/ping", func (c *echo.Context) error {
+	e.GET("/ping", func(c *echo.Context) error {
 		return c.String(http.StatusOK, "pong")
 	})
 	e.POST("/register", register)
@@ -84,8 +90,8 @@ func main() {
 	e.DELETE("/users/:user_id/hobbies/:hobby_id", deleteHobby)
 
 	e.GET("/ws", connectWebSocket)
-  
+
 	if err := e.Start(":8080"); err != nil {
-    slog.Error("failed to start server", "error", err)
-  }
+		slog.Error("failed to start server", "error", err)
+	}
 }

@@ -1,26 +1,25 @@
-package main
+package database
 
 import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"gorm.io/gorm"
+	"github.com/lib/pq"
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"os"
 	"strings"
-	"github.com/lib/pq"
+	"time"
 )
 
-var dbc *DBController
-
-const RefreshTokenLength = 256;
+const RefreshTokenLength = 256
 
 type User struct {
-	UserId uint64 `gorm:"primaryKey"`
-	Username string
+	UserId       uint64 `gorm:"primaryKey"`
+	Username     string
 	PasswordHash []byte `gorm:"type:bytea"`
 	RefreshToken string
-	Description string // Bio
+	Description  string // Bio
 }
 
 type DBController struct {
@@ -66,17 +65,17 @@ func (dbc *DBController) UserByRefreshToken(user *User) error {
 }
 
 type UserFilter struct {
-	UsernameContains string `json:"username_contains"`
-	HobbieIds []string `json:"hobbies"`
+	UsernameContains string   `json:"username_contains"`
+	HobbieIds        []string `json:"hobbies"`
 	KnownLanguageIds []string `json:"known_languages"`
 	LearnLanguageIds []string `json:"learn_languages"`
 }
 
 type Users []struct {
-	UserId uint64 `json:"user_id"`
-	Username string `json:"username"`
-	Description string `json:"description"`
-	HobbyTitles pq.StringArray `json:"hobby_titles" gorm:"type:text[]"`
+	UserId             uint64         `json:"user_id"`
+	Username           string         `json:"username"`
+	Description        string         `json:"description"`
+	HobbyTitles        pq.StringArray `json:"hobby_titles" gorm:"type:text[]"`
 	KnownLanguageNames pq.StringArray `json:"known_language_names" gorm:"type:text[]"`
 	LearnLanguageNames pq.StringArray `json:"learn_language_names" gorm:"type:text[]"`
 }
@@ -149,7 +148,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 			)
 		`, strings.Join(filter.LearnLanguageIds, ", "))
 	}
-	
+
 	err := dbc.db.Raw(query).Find(&result).Error
 	return result, err
 }
@@ -157,7 +156,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 func (dbc *DBController) UpdadateUser(user *User) error {
 	query := "UPDATE users "
 	var args []any
-	
+
 	if user.Description != "" || len(user.PasswordHash) != 0 {
 		query += "SET "
 	}
@@ -169,7 +168,7 @@ func (dbc *DBController) UpdadateUser(user *User) error {
 			query += ", "
 		}
 	}
-	
+
 	if user.Description != "" {
 		query += "description = ? "
 		args = append(args, user.Description)
@@ -186,8 +185,8 @@ func (dbc *DBController) DeleteLanguage(userId, languageId uint64) error {
 
 type Language struct {
 	LanguageId uint64 `json:"language_id"`
-	UserId uint64
-	IsKnown bool `json:"is_known"`
+	UserId     uint64
+	IsKnown    bool `json:"is_known"`
 }
 
 func (dbc *DBController) AddLanguage(language *Language) error {
@@ -205,7 +204,7 @@ func (dbc *DBController) DeleteHobby(userId, hobbyId uint64) error {
 
 type Hobby struct {
 	HobbyId uint64 `json:"hobby_id"`
-	UserId uint64
+	UserId  uint64
 }
 
 func (dbc *DBController) AddHobby(hobby *Hobby) error {
@@ -218,7 +217,7 @@ func (dbc *DBController) AddHobby(hobby *Hobby) error {
 
 func (dbc *DBController) DeleteUser(userId uint64) error {
 	res := dbc.db.Exec("DELETE FROM users WHERE user_id = ?", userId)
-	
+
 	if res.RowsAffected != 1 {
 		return gorm.ErrRecordNotFound
 	}
@@ -226,3 +225,91 @@ func (dbc *DBController) DeleteUser(userId uint64) error {
 	return res.Error
 }
 
+type Message struct {
+	MessageId uint64
+	SenderId  uint64
+	Content   string
+	CreatedAt time.Time
+}
+
+type MessagesRequest struct {
+	FromMessageId uint64
+	Limit         uint64
+}
+
+func (dbc *DBController) GetMessagesInChat(request *MessagesRequest) ([]Message, error) {
+	var messages []Message
+	err := dbc.db.Raw(`
+		WITH target_message AS (
+			SELECT created_at, id 
+			FROM messages 
+			WHERE id = ?
+		)
+		SELECT m.*
+		FROM messages m, target_message t
+		WHERE 
+			(m.created_at < t.created_at)
+			OR (m.created_at = t.created_at AND m.id < t.id)
+		ORDER BY m.created_at DESC, m.id DESC
+		LIMIT ?;
+	`, request.FromMessageId, request.Limit).Find(&messages).Error
+	return messages, err
+}
+
+func (dbc *DBController) CreateMessage(message *Message) error {
+	return dbc.db.Exec(`
+		INSERT INTO messages (message_id, sender_id, content, created_at) VALUES (?, ?, ?, ?)
+	`, message.MessageId, message.SenderId, message.Content, message.CreatedAt).Error
+}
+
+func (dbc *DBController) DeleteMessage(messageId uint64) error {
+	return dbc.db.Delete(`
+		DELETE FROM users WHERE message_id = ?
+	`, messageId).Error
+}
+
+type Chat struct {
+	ChatId uint64
+	Title  string
+	Type   string
+}
+
+func (dbc *DBController) CreateChat(chat *Chat) error {
+	return dbc.db.Exec(`
+		INSERT INTO chats (chat_id, title) VALUES (?, ?)
+	`, chat.ChatId, chat.Title).Error
+}
+
+func (dbc *DBController) JoinChat(chatId, userId uint64) error {
+	return dbc.db.Exec(`
+		INSERT INTO chat_members (chat_id, user_id) VALUES (?, ?)
+	`, chatId, userId).Error
+}
+
+func (dbc *DBController) MyChats(userId uint64) ([]Chat, error) {
+	var chats []Chat
+	err := dbc.db.Raw(`
+		SELECT chats.chat_id, chats.title, chats.type FROM chat_members JOIN chats ON chat_members.chat_id = chats.chat_id WHERE chat_members.user_id = ?;
+	`, userId).Find(&chats).Error
+	return chats, err
+}
+
+func (dbc *DBController) GetChatMembers(chatId uint64) ([]uint64, error) {
+	var members []uint64
+	err := dbc.db.Raw(`
+		SELECT user_id FROM chat_members WHERE chat_id = ?
+	`, chatId).Find(&members).Error
+	return members, err
+}
+
+func (dbc *DBController) LeaveChat(chatId, userId uint64) error {
+	return dbc.db.Exec(`
+		DELETE FROM chat_members WHERE user_id = ? AND chat_id = ?
+	`, userId, chatId).Error
+}
+
+func (dbc *DBController) DeleteChat(chatId uint64) error {
+	return dbc.db.Exec(`
+		DELETE FROM chats WHERE chat_id = ?
+	`, chatId).Error
+}

@@ -10,6 +10,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/Azat201003/languasia/backend/src/database"
 )
 
 type creditionals struct {
@@ -34,8 +36,8 @@ func register(c *echo.Context) error {
 		return err
 	}
 
-	err = dbc.RegisterUser(&User{
-		Username: request.Username,
+	err = dbc.RegisterUser(&database.User{
+		Username:     request.Username,
 		PasswordHash: passwordHash,
 	})
 	if err != nil {
@@ -45,13 +47,13 @@ func register(c *echo.Context) error {
 	return c.String(http.StatusOK, "Registered") // TODO I can answer smth
 }
 
-func login(c *echo.Context) error {	
+func login(c *echo.Context) error {
 	request := new(creditionals)
 	if err := c.Bind(request); err != nil {
 		return err
 	}
 
-	user := &User{
+	user := &database.User{
 		Username: request.Username,
 	}
 	fmt.Println("!!USER: ", user)
@@ -68,10 +70,10 @@ func login(c *echo.Context) error {
 	}
 
 	privateKey, err := os.ReadFile("private_key.pem")
-	
+
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Cannot read private_key.pem: %v", err.Error()))
-	} 
+	}
 
 	userIdString := strconv.FormatUint(user.UserId, 10)
 
@@ -96,7 +98,7 @@ func login(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"refresh_token": user.RefreshToken,
-		"jwt_token": jwt_token_string,
+		"jwt_token":     jwt_token_string,
 	})
 }
 
@@ -109,7 +111,7 @@ func refresh(c *echo.Context) error {
 	if err := c.Bind(request); err != nil {
 		return err
 	}
-	user := &User{
+	user := &database.User{
 		RefreshToken: request.RefreshToken,
 	}
 	err := dbc.UserByRefreshToken(user)
@@ -117,12 +119,12 @@ func refresh(c *echo.Context) error {
 		c.String(http.StatusUnauthorized, "Not valid refresh token")
 		return err
 	}
-	
+
 	privateKey, err := os.ReadFile("private_key.pem")
-	
+
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Cannot read private_key.pem: %v", err.Error()))
-	} 
+	}
 
 	userIdString := strconv.FormatUint(user.UserId, 10)
 
@@ -147,12 +149,12 @@ func refresh(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"refresh_token": user.RefreshToken,
-		"jwt_token": jwt_token_string,
+		"jwt_token":     jwt_token_string,
 	})
 }
 
 func recieveFilteredUsers(c *echo.Context) error {
-	filter := new(UserFilter)
+	filter := new(database.UserFilter)
 
 	if err := c.Bind(filter); err != nil {
 		return err
@@ -195,10 +197,10 @@ func deleteUser(c *echo.Context) error {
 
 type updateUserRequest struct {
 	Description string `json:"description"`
-	Password string `json:"password"`
+	Password    string `json:"password"`
 }
 
-func updateUser(c *echo.Context) error {	
+func updateUser(c *echo.Context) error {
 	userIdString := c.ParamOr("user_id", "0")
 
 	userId, err := strconv.ParseUint(userIdString, 10, 64)
@@ -210,23 +212,23 @@ func updateUser(c *echo.Context) error {
 	if c.Get("user_id") != userId {
 		return c.String(http.StatusUnauthorized, fmt.Sprintf("token user_id and put user_id not match: %v != %v", userId, c.Get("user_id")))
 	}
-	
-	request := new (updateUserRequest)
+
+	request := new(updateUserRequest)
 	if err := c.Bind(request); err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse user data: %v", err.Error()))
 		return err
 	}
-	
+
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("Cannot get hash of password: %v", err.Error()))
 		return err
 	}
 
-	err = dbc.UpdadateUser(&User{
-		UserId: userId,
+	err = dbc.UpdadateUser(&database.User{
+		UserId:       userId,
 		PasswordHash: passwordHash,
-		Description: request.Description,
+		Description:  request.Description,
 	})
 	if err != nil {
 		return err
@@ -236,8 +238,8 @@ func updateUser(c *echo.Context) error {
 }
 
 func addLanguage(c *echo.Context) error {
-	request := new (Language)
-	if err := c.Bind(request); err != nil {	
+	request := new(database.Language)
+	if err := c.Bind(request); err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse language data: %v", err.Error()))
 		return err
 	}
@@ -251,16 +253,16 @@ func addLanguage(c *echo.Context) error {
 	if c.Get("user_id") != request.UserId {
 		return c.String(http.StatusUnauthorized, "token user_id and put user_id not match")
 	}
-	
+
 	return dbc.AddLanguage(request)
-} 
+}
 
 func deleteLanguage(c *echo.Context) error {
 	userId, err := strconv.ParseUint(c.ParamOr("user_id", "0"), 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	if c.Get("user_id") != userId {
 		return c.String(http.StatusUnauthorized, "token user_id and put user_id not match")
 	}
@@ -273,10 +275,9 @@ func deleteLanguage(c *echo.Context) error {
 	return dbc.DeleteLanguage(userId, languageId)
 }
 
-
 func addHobby(c *echo.Context) error {
-	request := new (Hobby)
-	if err := c.Bind(request); err != nil {	
+	request := new(database.Hobby)
+	if err := c.Bind(request); err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse language data: %v", err.Error()))
 		return err
 	}
@@ -286,24 +287,24 @@ func addHobby(c *echo.Context) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if c.Get("user_id") != request.UserId {
 		return c.String(http.StatusUnauthorized, "token user_id and put user_id not match")
 	}
 
 	return dbc.AddHobby(request)
-} 
+}
 
 func deleteHobby(c *echo.Context) error {
 	userId, err := strconv.ParseUint(c.ParamOr("user_id", "0"), 10, 64)
 	if err != nil {
 		return err
 	}
-	
+
 	if c.Get("user_id") != userId {
 		return c.String(http.StatusUnauthorized, "token user_id and put user_id not match")
 	}
-	
+
 	hobbyId, err := strconv.ParseUint(c.ParamOr("hobby_id", "0"), 10, 64)
 	if err != nil {
 		return err

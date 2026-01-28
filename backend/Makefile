@@ -2,7 +2,7 @@ all: run
 
 run:
 	rm log
-	DB_HOST=localhost go run ./src | tee -a log
+	DB_HOST=localhost go run ./src/cmd | tee -a log
 
 migrate:
 	@echo "Starting database migrations..."

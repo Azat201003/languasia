@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+var DBC *DBController
+
 const RefreshTokenLength = 256
 
 type User struct {
@@ -295,6 +297,11 @@ func (dbc *DBController) MyChats(userId uint64) ([]Chat, error) {
 }
 
 func (dbc *DBController) GetChatMembers(chatId uint64) ([]uint64, error) {
+	if chatId == 0 {
+		err := dbc.db.Raw(`
+			SELECT user_id FROM users
+		`)
+	}
 	var members []uint64
 	err := dbc.db.Raw(`
 		SELECT user_id FROM chat_members WHERE chat_id = ?

@@ -26,8 +26,8 @@ type Client struct {
 }
 
 type WebSocketHub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
+	clients    map[uint64]*Client // by user_id
+	broadcast  chan Broadcast
 	register   chan *Client
 	unregister chan *Client
 	mutex      sync.RWMutex
@@ -35,21 +35,24 @@ type WebSocketHub struct {
 
 type Broadcast struct {
 	chatId  uint64
+	userId 	uint64
 	content []byte
 }
 
 type Message struct {
 	Type      string `json:"type"`
-	Username  string `json:"username"`
+}
+
+type ChatMessage struct {
+	ChatId 		uint64 `json:"chat_id"`
 	Content   string `json:"content"`
-	Timestamp string `json:"timestamp"`
 }
 
 func NewHub() *WebSocketHub {
 	fmt.Println("Creating new hub")
 	return &WebSocketHub{
-		clients:    make(map[*Client]bool),
-		broadcast:  make(chan []byte, 256),
+		clients:    make(map[uint64]*Client),
+		broadcast:  make(chan Broadcast, 256),
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
 	}
@@ -64,15 +67,15 @@ func (h *WebSocketHub) Run() {
 		case client := <-h.register:
 			fmt.Printf("[HUB] Registering client: %v\n", client)
 			h.mutex.Lock()
-			h.clients[client] = true
+			h.clients[client.user.UserId] = client
 			h.mutex.Unlock()
 			fmt.Printf("[HUB] Client registered. Total clients: %d\n", len(h.clients))
 
 		case client := <-h.unregister:
 			fmt.Printf("[HUB] Unregistering client: %v (username: %s)\n", client, client.user.Username)
 			h.mutex.Lock()
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
+			if h.clients[client.user.UserId] != nil {
+				h.clients[client.user.UserId] = nil
 				client.mu.Lock()
 				if !client.closed {
 					client.closed = true
@@ -85,49 +88,44 @@ func (h *WebSocketHub) Run() {
 			}
 			h.mutex.Unlock()
 
-		case message := <-h.broadcast:
+		case broadcast := <-h.broadcast:
 			h.mutex.RLock()
-			clientCount := len(h.clients)
-			fmt.Printf("[HUB] Starting broadcast to %d clients\n", clientCount)
+			fmt.Printf("[HUB] Starting broadcast to chat with chat_id: %d\n", broadcast.chatId)
+			var userIds []uint64
+			if broadcast.chatId == 0 {
+				for userId, _ := range h.clients {
+					userIds = append(userIds, userId)
+				}
+			} else {
+				var err error
+				userIds, err = database.DBC.GetChatMembers(broadcast.chatId)
 
-			if clientCount == 0 {
-				fmt.Println("[HUB] No clients to broadcast to")
-				h.mutex.RUnlock()
-				continue
+				if err != nil {
+					fmt.Printf("[HUB] Broadcasting failed: %v\n", err.Error())
+				}
 			}
 
-			clientsToRemove := make([]*Client, 0)
-
-			for client := range h.clients {
+			for _, id := range userIds {
+				client := h.clients[id]
 				client.mu.Lock()
 				if client.closed {
-					clientsToRemove = append(clientsToRemove, client)
+					h.unregister <- client
 					client.mu.Unlock()
 					continue
 				}
 
-				select {
-				case client.send <- message:
+				select{
+				case client.send <- broadcast.content:
 					fmt.Printf("[HUB] Message sent to client %s\n", client.user.Username)
 				default:
 					fmt.Printf("[HUB] Client %s send channel full or closed, marking for removal\n", client.user.Username)
 					client.closed = true
-					close(client.send)
-					clientsToRemove = append(clientsToRemove, client)
+					h.unregister <- client
 				}
 				client.mu.Unlock()
 			}
 			h.mutex.RUnlock()
-
-			// Remove dead clients
-			if len(clientsToRemove) > 0 {
-				fmt.Printf("[HUB] Removing %d dead clients\n", len(clientsToRemove))
-				h.mutex.Lock()
-				for _, client := range clientsToRemove {
-					delete(h.clients, client)
-				}
-				h.mutex.Unlock()
-			}
+			
 			fmt.Println("[HUB] Broadcast completed")
 		}
 	}
@@ -135,14 +133,11 @@ func (h *WebSocketHub) Run() {
 
 func (h *WebSocketHub) broadcastSystemMessage(content string) {
 	fmt.Printf("[HUB] Broadcasting system message: %s\n", content)
-	msg := Message{
-		Type:      "system",
-		Username:  "System",
+	msg := ChatMessage{
 		Content:   content,
-		Timestamp: time.Now().Format("15:04:05"),
 	}
 	bytes, _ := json.Marshal(msg)
-	h.broadcast <- bytes
+	h.broadcast <- Broadcast{0, bytes}
 }
 
 func (c *Client) readPump(hub *WebSocketHub) {
@@ -198,7 +193,7 @@ func (c *Client) readPump(hub *WebSocketHub) {
 			bytes, _ := json.Marshal(msg)
 			hub.broadcast <- bytes
 
-		case "ping":
+	/*	case "ping":
 			fmt.Printf("[READ_PUMP] Ping received from %s, sending pong\n", c.user.Username)
 			// Отправляем pong в ответ
 			pongMsg := Message{
@@ -219,7 +214,7 @@ func (c *Client) readPump(hub *WebSocketHub) {
 				}
 			}
 			c.mu.Unlock()
-
+*/
 		default:
 			fmt.Printf("[READ_PUMP] Unknown message type from %s: %s\n", c.user.Username, msg.Type)
 		}
@@ -287,9 +282,6 @@ func (c *Client) writePump(hub *WebSocketHub) {
 			// Отправляем ping сообщение
 			pingMsg := Message{
 				Type:      "ping",
-				Username:  "System",
-				Content:   "ping",
-				Timestamp: time.Now().Format("15:04:05"),
 			}
 			pingBytes, _ := json.Marshal(pingMsg)
 
@@ -306,7 +298,7 @@ func (c *Client) writePump(hub *WebSocketHub) {
 	}
 }
 
-func (hub *WebSocketHub) ConnectWebSocket(w http.ResponseWriter, r *http.Request) error {
+func (hub *WebSocketHub) ConnectWebSocket(w http.ResponseWriter, r *http.Request, user database.User) error {
 	fmt.Println("[WS] New connection attempt")
 
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -321,6 +313,7 @@ func (hub *WebSocketHub) ConnectWebSocket(w http.ResponseWriter, r *http.Request
 		conn:   conn,
 		send:   make(chan []byte, 256),
 		closed: false,
+		user: user, 
 	}
 
 	hub.register <- client

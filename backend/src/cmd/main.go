@@ -53,13 +53,12 @@ func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 var wsh *websocket.WebSocketHub
-var dbc *database.DBController
 
 func main() {
 	// database
-	dbc = new(database.DBController)
+	database.DBC = new(database.DBController)
 
-	if err := dbc.ConnectDB(); err != nil {
+	if err := database.DBC.ConnectDB(); err != nil {
 		panic(err)
 	}
 

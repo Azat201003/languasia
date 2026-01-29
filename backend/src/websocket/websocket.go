@@ -34,9 +34,9 @@ type WebSocketHub struct {
 }
 
 type Broadcast struct {
-	chatId  uint64
-	userId 	uint64
-	content []byte
+	ChatId  uint64 `json:"chat_id"`
+	UserId 	uint64 `json:"user_id"`
+	Content string `json:"content"`
 }
 
 type Message struct {
@@ -90,19 +90,25 @@ func (h *WebSocketHub) Run() {
 
 		case broadcast := <-h.broadcast:
 			h.mutex.RLock()
-			fmt.Printf("[HUB] Starting broadcast to chat with chat_id: %d\n", broadcast.chatId)
+			fmt.Printf("[HUB] Starting broadcast to chat with chat_id: %d\n", broadcast.ChatId)
 			var userIds []uint64
-			if broadcast.chatId == 0 {
+			if broadcast.ChatId == 0 {
 				for userId, _ := range h.clients {
 					userIds = append(userIds, userId)
 				}
 			} else {
 				var err error
-				userIds, err = database.DBC.GetChatMembers(broadcast.chatId)
+				userIds, err = database.DBC.GetChatMembers(broadcast.ChatId)
 
 				if err != nil {
 					fmt.Printf("[HUB] Broadcasting failed: %v\n", err.Error())
 				}
+			}
+
+			bytes, err := json.Marshal(broadcast)
+			
+			if err != nil {
+				continue
 			}
 
 			for _, id := range userIds {
@@ -115,7 +121,7 @@ func (h *WebSocketHub) Run() {
 				}
 
 				select{
-				case client.send <- broadcast.content:
+				case client.send <- bytes:
 					fmt.Printf("[HUB] Message sent to client %s\n", client.user.Username)
 				default:
 					fmt.Printf("[HUB] Client %s send channel full or closed, marking for removal\n", client.user.Username)
@@ -137,7 +143,7 @@ func (h *WebSocketHub) broadcastSystemMessage(content string) {
 		Content:   content,
 	}
 	bytes, _ := json.Marshal(msg)
-	h.broadcast <- Broadcast{0, bytes}
+	h.broadcast <- Broadcast{0, 0, string(bytes)}
 }
 
 func (c *Client) readPump(hub *WebSocketHub) {
@@ -188,19 +194,18 @@ func (c *Client) readPump(hub *WebSocketHub) {
 		case "chat":
 			fmt.Printf("[READ_PUMP] Chat message from %s\n", c.user.Username)
 			// Рассылаем сообщение всем клиентам
-			msg.Timestamp = time.Now().Format("15:04:05")
-			msg.Username = c.user.Username
-			bytes, _ := json.Marshal(msg)
-			hub.broadcast <- bytes
+			var chatMessage ChatMessage
+			if err := json.Unmarshal(message, &chatMessage); err != nil {
+				fmt.Printf("[READ_PUMP] Error parsing message from %s: %v 2\n", c.user.Username, err)
+				continue
+			}
+			hub.broadcast <- Broadcast{chatMessage.ChatId, c.user.UserId, chatMessage.Content}
 
-	/*	case "ping":
+		case "ping":
 			fmt.Printf("[READ_PUMP] Ping received from %s, sending pong\n", c.user.Username)
 			// Отправляем pong в ответ
 			pongMsg := Message{
 				Type:      "pong",
-				Username:  "System",
-				Content:   "pong",
-				Timestamp: time.Now().Format("15:04:05"),
 			}
 			pongBytes, _ := json.Marshal(pongMsg)
 
@@ -214,7 +219,7 @@ func (c *Client) readPump(hub *WebSocketHub) {
 				}
 			}
 			c.mu.Unlock()
-*/
+
 		default:
 			fmt.Printf("[READ_PUMP] Unknown message type from %s: %s\n", c.user.Username, msg.Type)
 		}

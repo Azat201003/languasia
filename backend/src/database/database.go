@@ -67,6 +67,7 @@ func (dbc *DBController) UserByRefreshToken(user *User) error {
 }
 
 type UserFilter struct {
+	UserId 					 uint64   `json:"user_id"`
 	UsernameContains string   `json:"username_contains"`
 	HobbieIds        []string `json:"hobbies"`
 	KnownLanguageIds []string `json:"known_languages"`
@@ -149,6 +150,12 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 							AND l2.language_id IN (%v)
 			)
 		`, strings.Join(filter.LearnLanguageIds, ", "))
+	}
+
+	if filter.UserId != 0 {
+		query += fmt.Sprintf(`
+			AND u.user_id = %v
+		`, filter.UserId)
 	}
 
 	err := dbc.db.Raw(query).Find(&result).Error
@@ -297,11 +304,6 @@ func (dbc *DBController) MyChats(userId uint64) ([]Chat, error) {
 }
 
 func (dbc *DBController) GetChatMembers(chatId uint64) ([]uint64, error) {
-	if chatId == 0 {
-		err := dbc.db.Raw(`
-			SELECT user_id FROM users
-		`)
-	}
 	var members []uint64
 	err := dbc.db.Raw(`
 		SELECT user_id FROM chat_members WHERE chat_id = ?

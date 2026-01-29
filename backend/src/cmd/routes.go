@@ -36,7 +36,7 @@ func register(c *echo.Context) error {
 		return err
 	}
 
-	err = dbc.RegisterUser(&database.User{
+	err = database.DBC.RegisterUser(&database.User{
 		Username:     request.Username,
 		PasswordHash: passwordHash,
 	})
@@ -57,7 +57,7 @@ func login(c *echo.Context) error {
 		Username: request.Username,
 	}
 	fmt.Println("!!USER: ", user)
-	err := dbc.LoginUser(user)
+	err := database.DBC.LoginUser(user)
 	if err != nil {
 		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("Cannot find user: %v", err.Error()))
 		return err
@@ -114,7 +114,7 @@ func refresh(c *echo.Context) error {
 	user := &database.User{
 		RefreshToken: request.RefreshToken,
 	}
-	err := dbc.UserByRefreshToken(user)
+	err := database.DBC.UserByRefreshToken(user)
 	if err != nil {
 		c.String(http.StatusUnauthorized, "Not valid refresh token")
 		return err
@@ -160,7 +160,7 @@ func recieveFilteredUsers(c *echo.Context) error {
 		return err
 	}
 
-	users, err := dbc.RecieveFilteredUsers(filter)
+	users, err := database.DBC.RecieveFilteredUsers(filter)
 
 	if err != nil {
 		return err
@@ -170,7 +170,30 @@ func recieveFilteredUsers(c *echo.Context) error {
 }
 
 func connectWebSocket(c *echo.Context) error {
-	return wsh.ConnectWebSocket(c.Response(), c.Request())
+	if c.Get("user_id") != nil {
+		return c.String(http.StatusUnauthorized, "Token user_id is nil")
+	}
+
+	if _, ok := c.Get("user_id").(uint64); ok {
+		return c.String(http.StatusUnauthorized, "Cannot parse user_id")
+	}
+
+	users, err := database.DBC.RecieveFilteredUsers(&database.UserFilter{UserId: c.Get("user_id").(uint64)})
+	if err != nil {
+		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot find user: %v", err.Error()))
+	}
+
+	if len(users) == 0 {
+		return c.String(http.StatusBadRequest, "Cannot find user")
+	}
+
+	user := users[0]
+
+	return wsh.ConnectWebSocket(c.Response(), c.Request(), database.User{
+		UserId: user.UserId,
+		Username: user.Username,
+		Description: user.Description,
+	})
 }
 
 func deleteUser(c *echo.Context) error {
@@ -186,7 +209,7 @@ func deleteUser(c *echo.Context) error {
 		return c.String(http.StatusUnauthorized, "token user_id and put user_id not match")
 	}
 
-	err = dbc.DeleteUser(userId)
+	err = database.DBC.DeleteUser(userId)
 	if err != nil {
 		c.String(http.StatusTeapot, fmt.Sprintf("Cannot delete user: %v", err.Error()))
 		return err
@@ -225,7 +248,7 @@ func updateUser(c *echo.Context) error {
 		return err
 	}
 
-	err = dbc.UpdadateUser(&database.User{
+	err = database.DBC.UpdadateUser(&database.User{
 		UserId:       userId,
 		PasswordHash: passwordHash,
 		Description:  request.Description,
@@ -254,7 +277,7 @@ func addLanguage(c *echo.Context) error {
 		return c.String(http.StatusUnauthorized, "token user_id and put user_id not match")
 	}
 
-	return dbc.AddLanguage(request)
+	return database.DBC.AddLanguage(request)
 }
 
 func deleteLanguage(c *echo.Context) error {
@@ -272,7 +295,7 @@ func deleteLanguage(c *echo.Context) error {
 		return err
 	}
 
-	return dbc.DeleteLanguage(userId, languageId)
+	return database.DBC.DeleteLanguage(userId, languageId)
 }
 
 func addHobby(c *echo.Context) error {
@@ -292,7 +315,7 @@ func addHobby(c *echo.Context) error {
 		return c.String(http.StatusUnauthorized, "token user_id and put user_id not match")
 	}
 
-	return dbc.AddHobby(request)
+	return database.DBC.AddHobby(request)
 }
 
 func deleteHobby(c *echo.Context) error {
@@ -310,5 +333,5 @@ func deleteHobby(c *echo.Context) error {
 		return err
 	}
 
-	return dbc.DeleteHobby(userId, hobbyId)
+	return database.DBC.DeleteHobby(userId, hobbyId)
 }

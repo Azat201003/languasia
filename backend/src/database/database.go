@@ -67,7 +67,7 @@ func (dbc *DBController) UserByRefreshToken(user *User) error {
 }
 
 type UserFilter struct {
-	UserId 					 uint64   `json:"user_id"`
+	UserId           uint64   `json:"user_id"`
 	UsernameContains string   `json:"username_contains"`
 	HobbieIds        []string `json:"hobbies"`
 	KnownLanguageIds []string `json:"known_languages"`
@@ -247,7 +247,7 @@ type Message struct {
 type MessagesRequest struct {
 	FromMessageId uint64 `json:"from_message_id"`
 	Limit         uint64 `json:"limit"`
-	ChatId 				uint64 `json:"chat_id"`
+	ChatId        uint64 `json:"chat_id"`
 }
 
 func (dbc *DBController) GetMessagesInChat(request *MessagesRequest) ([]Message, error) {

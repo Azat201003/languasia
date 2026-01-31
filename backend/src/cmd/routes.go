@@ -171,7 +171,6 @@ func recieveFilteredUsers(c *echo.Context) error {
 
 func connectWebSocket(c *echo.Context) (err error) {
 	//defer fmt.Println(err.Error())
-	
 
 	if c.Get("user_id") == nil {
 		return c.String(http.StatusUnauthorized, "Token user_id is nil")
@@ -189,7 +188,7 @@ func connectWebSocket(c *echo.Context) (err error) {
 	}
 
 	fmt.Println(users[0])
-	
+
 	if len(users) == 0 {
 		return c.String(http.StatusBadRequest, "Cannot find user")
 	}
@@ -197,8 +196,8 @@ func connectWebSocket(c *echo.Context) (err error) {
 	user := users[0]
 
 	return wsh.ConnectWebSocket(c.Response(), c.Request(), database.User{
-		UserId: user.UserId,
-		Username: user.Username,
+		UserId:      user.UserId,
+		Username:    user.Username,
 		Description: user.Description,
 	})
 }

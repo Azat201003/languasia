@@ -31,7 +31,7 @@ func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
 
 		userIdString, err := token.Claims.GetIssuer()
-		
+
 		userId, err := strconv.ParseUint(userIdString, 10, 64)
 
 		c.Set("user_id", userId)

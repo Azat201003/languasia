@@ -18,7 +18,6 @@ import (
 
 func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c *echo.Context) (err error) {
-		defer next(c)
 		tokenString := strings.TrimPrefix(c.Request().Header.Get("Authorization"), "Bearer ")
 
 		fmt.Println(c.Request().Header.Get("Authorization"), tokenString)
@@ -31,24 +30,13 @@ func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 			return jwt.ParseEdPublicKeyFromPEM(publicKey)
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
 
-		if err != nil {
-			return err
-		}
-
 		userIdString, err := token.Claims.GetIssuer()
-		if err != nil {
-			return err
-		}
-
+		
 		userId, err := strconv.ParseUint(userIdString, 10, 64)
-
-		if err != nil {
-			return err
-		}
 
 		c.Set("user_id", userId)
 
-		return nil
+		return next(c)
 	}
 }
 

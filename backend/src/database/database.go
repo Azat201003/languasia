@@ -158,6 +158,8 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 		`, filter.UserId)
 	}
 
+	fmt.Println(query)
+
 	err := dbc.db.Raw(query).Find(&result).Error
 	return result, err
 }
@@ -238,37 +240,49 @@ type Message struct {
 	MessageId uint64
 	SenderId  uint64
 	Content   string
+	ChatId    uint64
 	CreatedAt time.Time
 }
 
 type MessagesRequest struct {
-	FromMessageId uint64
-	Limit         uint64
+	FromMessageId uint64 `json:"from_message_id"`
+	Limit         uint64 `json:"limit"`
+	ChatId 				uint64 `json:"chat_id"`
 }
 
 func (dbc *DBController) GetMessagesInChat(request *MessagesRequest) ([]Message, error) {
 	var messages []Message
-	err := dbc.db.Raw(`
-		WITH target_message AS (
-			SELECT created_at, id 
-			FROM messages 
-			WHERE id = ?
-		)
-		SELECT m.*
-		FROM messages m, target_message t
-		WHERE 
-			(m.created_at < t.created_at)
-			OR (m.created_at = t.created_at AND m.id < t.id)
-		ORDER BY m.created_at DESC, m.id DESC
-		LIMIT ?;
-	`, request.FromMessageId, request.Limit).Find(&messages).Error
+	var err error
+	if request.FromMessageId == 0 {
+		err = dbc.db.Raw(`
+			SELECT * FROM messages WHERE chat_id = ? LIMIT ?
+		`, request.ChatId, request.Limit).Find(&messages).Error
+	} else {
+		err = dbc.db.Raw(`
+			WITH target_message AS (
+				SELECT created_at, message_id
+				FROM messages 
+				WHERE message_id = ?
+			)
+			SELECT m.*
+			FROM messages m, target_message t
+			WHERE 
+				((m.created_at < t.created_at)
+				OR (m.created_at = t.created_at AND m.message_id < t.message_id))
+				AND (m.chat_id = ?)
+			ORDER BY m.created_at DESC, m.message_id DESC
+			LIMIT ?;
+		`, request.FromMessageId, request.ChatId, request.Limit).Find(&messages).Error
+	}
 	return messages, err
 }
 
-func (dbc *DBController) CreateMessage(message *Message) error {
-	return dbc.db.Exec(`
-		INSERT INTO messages (message_id, sender_id, content, created_at) VALUES (?, ?, ?, ?)
-	`, message.MessageId, message.SenderId, message.Content, message.CreatedAt).Error
+func (dbc *DBController) CreateMessage(message *Message) (time.Time, uint64, error) {
+	var result Message
+	err := dbc.db.Raw(`
+		INSERT INTO messages (chat_id, sender_id, content) VALUES (?, ?, ?) RETURNING created_at, message_id
+	`, message.ChatId, message.SenderId, message.Content).Scan(&result).Error
+	return result.CreatedAt, result.MessageId, err
 }
 
 func (dbc *DBController) DeleteMessage(messageId uint64) error {

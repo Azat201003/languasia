@@ -166,23 +166,30 @@ func recieveFilteredUsers(c *echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusFound, users)
+	return c.JSON(http.StatusOK, users)
 }
 
-func connectWebSocket(c *echo.Context) error {
-	if c.Get("user_id") != nil {
+func connectWebSocket(c *echo.Context) (err error) {
+	//defer fmt.Println(err.Error())
+	
+
+	if c.Get("user_id") == nil {
 		return c.String(http.StatusUnauthorized, "Token user_id is nil")
 	}
 
-	if _, ok := c.Get("user_id").(uint64); ok {
+	if _, ok := c.Get("user_id").(uint64); !ok {
 		return c.String(http.StatusUnauthorized, "Cannot parse user_id")
 	}
+
+	fmt.Println("id: ", c.Get("user_id").(uint64))
 
 	users, err := database.DBC.RecieveFilteredUsers(&database.UserFilter{UserId: c.Get("user_id").(uint64)})
 	if err != nil {
 		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot find user: %v", err.Error()))
 	}
 
+	fmt.Println(users[0])
+	
 	if len(users) == 0 {
 		return c.String(http.StatusBadRequest, "Cannot find user")
 	}

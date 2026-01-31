@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
-	"slices"
 
 	"github.com/gorilla/websocket"
 
@@ -19,11 +19,11 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	conn   *websocket.Conn
-	send   chan []byte
-	mu     sync.Mutex
-	closed bool
-	user   database.User
+	conn     *websocket.Conn
+	send     chan []byte
+	mu       sync.Mutex
+	closed   bool
+	user     database.User
 	clientId uint64
 }
 
@@ -36,20 +36,20 @@ type WebSocketHub struct {
 }
 
 type Broadcast struct {
-	ChatId  uint64 `json:"chat_id"`
-	UserId 	uint64 `json:"user_id"`
-	Content string `json:"content"`
+	ChatId    uint64    `json:"chat_id"`
+	UserId    uint64    `json:"user_id"`
+	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
-	MessageId uint64 `json:"message_id"`
+	MessageId uint64    `json:"message_id"`
 }
 
 type Message struct {
-	Type      string `json:"type"`
+	Type string `json:"type"`
 }
 
 type ChatMessage struct {
-	ChatId 		uint64 `json:"chat_id"`
-	Content   string `json:"content"`
+	ChatId  uint64 `json:"chat_id"`
+	Content string `json:"content"`
 }
 
 func NewHub() *WebSocketHub {
@@ -100,12 +100,12 @@ func (h *WebSocketHub) Run() {
 			var containsUser bool
 			if broadcast.ChatId == 0 {
 				for clientId, _ := range h.clients {
-					clientIds = append(clientIds,	clientId)
+					clientIds = append(clientIds, clientId)
 				}
 				containsUser = true
 			} else {
 				userIds, err := database.DBC.GetChatMembers(broadcast.ChatId)
-				
+
 				containsUser = true
 				if !slices.Contains(userIds, broadcast.UserId) {
 					containsUser = false
@@ -114,7 +114,7 @@ func (h *WebSocketHub) Run() {
 				for clientId, client := range h.clients {
 					fmt.Println(clientId, slices.Contains(userIds, client.user.UserId))
 					if slices.Contains(userIds, client.user.UserId) {
-						clientIds = append(clientIds,	clientId)
+						clientIds = append(clientIds, clientId)
 					}
 				}
 
@@ -132,13 +132,13 @@ func (h *WebSocketHub) Run() {
 			var err error
 
 			broadcast.CreatedAt, broadcast.MessageId, err = database.DBC.CreateMessage(&database.Message{
-				Content: broadcast.Content,
-				ChatId: broadcast.ChatId,
+				Content:  broadcast.Content,
+				ChatId:   broadcast.ChatId,
 				SenderId: broadcast.UserId,
 			})
 
 			bytes, err := json.Marshal(broadcast)
-			
+
 			if err != nil {
 				h.mutex.RUnlock()
 				continue
@@ -156,7 +156,7 @@ func (h *WebSocketHub) Run() {
 					continue
 				}
 
-				select{
+				select {
 				case client.send <- bytes:
 					fmt.Printf("[HUB] Message sent to client %s\n", client.user.Username)
 				default:
@@ -167,7 +167,7 @@ func (h *WebSocketHub) Run() {
 				client.mu.Unlock()
 			}
 			h.mutex.RUnlock()
-			
+
 			fmt.Println("[HUB] Broadcast completed")
 		}
 	}
@@ -175,7 +175,8 @@ func (h *WebSocketHub) Run() {
 
 func (h *WebSocketHub) getUniqueClientId() uint64 {
 	var i uint64 = 1
-	for ;h.clients[i]!=nil;i++ {}
+	for ; h.clients[i] != nil; i++ {
+	}
 	return i
 }
 
@@ -244,10 +245,10 @@ func (c *Client) readPump(hub *WebSocketHub) {
 					fmt.Printf("[READ_PUMP] Cannot recieve messages: %v\n", err.Error())
 					return
 				}
-				
+
 				containsUser := false
 				if request.ChatId == 0 {
-					containsUser = true	
+					containsUser = true
 				} else {
 					userIds, err := database.DBC.GetChatMembers(request.ChatId)
 
@@ -264,12 +265,12 @@ func (c *Client) readPump(hub *WebSocketHub) {
 					fmt.Println("[READ_PUMP] Broadcasting requested for user that isn't in chat")
 					return
 				}
-				
+
 				for _, broadcast := range messages {
 					bytes, err := json.Marshal(Broadcast{
-						UserId: broadcast.SenderId,
-						Content: broadcast.Content,
-						ChatId: broadcast.ChatId,
+						UserId:    broadcast.SenderId,
+						Content:   broadcast.Content,
+						ChatId:    broadcast.ChatId,
 						CreatedAt: broadcast.CreatedAt,
 						MessageId: broadcast.MessageId,
 					})
@@ -278,13 +279,13 @@ func (c *Client) readPump(hub *WebSocketHub) {
 					}
 					c.send <- bytes
 				}
-			} (c, message)
+			}(c, message)
 
 		case "ping":
 			fmt.Printf("[READ_PUMP] Ping received from %s, sending pong\n", c.user.Username)
 			// Отправляем pong в ответ
 			pongMsg := Message{
-				Type:      "pong",
+				Type: "pong",
 			}
 			pongBytes, _ := json.Marshal(pongMsg)
 
@@ -366,7 +367,7 @@ func (c *Client) writePump(hub *WebSocketHub) {
 
 			// Отправляем ping сообщение
 			pingMsg := Message{
-				Type:      "ping",
+				Type: "ping",
 			}
 			pingBytes, _ := json.Marshal(pingMsg)
 
@@ -398,7 +399,7 @@ func (hub *WebSocketHub) ConnectWebSocket(w http.ResponseWriter, r *http.Request
 		conn:   conn,
 		send:   make(chan []byte, 256),
 		closed: false,
-		user: user, 
+		user:   user,
 	}
 
 	hub.register <- client

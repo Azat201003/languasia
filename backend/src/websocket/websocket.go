@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
+	"slices"
 
 	"github.com/gorilla/websocket"
 
@@ -37,6 +38,8 @@ type Broadcast struct {
 	ChatId  uint64 `json:"chat_id"`
 	UserId 	uint64 `json:"user_id"`
 	Content string `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+	MessageId uint64 `json:"message_id"`
 }
 
 type Message struct {
@@ -94,7 +97,7 @@ func (h *WebSocketHub) Run() {
 			var userIds []uint64
 			if broadcast.ChatId == 0 {
 				for userId, _ := range h.clients {
-					userIds = append(userIds, userId)
+					userIds = append(userIds,	userId)
 				}
 			} else {
 				var err error
@@ -105,14 +108,32 @@ func (h *WebSocketHub) Run() {
 				}
 			}
 
+			if !slices.Contains(userIds, broadcast.UserId) {
+				fmt.Println("[HUB] Broadcasting requested for user that isn't in chat")
+				h.mutex.RUnlock()
+				continue
+			}
+
+			var err error
+
+			broadcast.CreatedAt, broadcast.MessageId, err = database.DBC.CreateMessage(&database.Message{
+				Content: broadcast.Content,
+				ChatId: broadcast.ChatId,
+				SenderId: broadcast.UserId,
+			})
+
 			bytes, err := json.Marshal(broadcast)
 			
 			if err != nil {
+				h.mutex.RUnlock()
 				continue
 			}
 
 			for _, id := range userIds {
 				client := h.clients[id]
+				if client == nil {
+					continue
+				}
 				client.mu.Lock()
 				if client.closed {
 					h.unregister <- client
@@ -137,6 +158,7 @@ func (h *WebSocketHub) Run() {
 	}
 }
 
+/*
 func (h *WebSocketHub) broadcastSystemMessage(content string) {
 	fmt.Printf("[HUB] Broadcasting system message: %s\n", content)
 	msg := ChatMessage{
@@ -145,6 +167,7 @@ func (h *WebSocketHub) broadcastSystemMessage(content string) {
 	bytes, _ := json.Marshal(msg)
 	h.broadcast <- Broadcast{0, 0, string(bytes)}
 }
+*/
 
 func (c *Client) readPump(hub *WebSocketHub) {
 	fmt.Printf("[READ_PUMP] Starting read pump for client\n")
@@ -199,7 +222,53 @@ func (c *Client) readPump(hub *WebSocketHub) {
 				fmt.Printf("[READ_PUMP] Error parsing message from %s: %v 2\n", c.user.Username, err)
 				continue
 			}
-			hub.broadcast <- Broadcast{chatMessage.ChatId, c.user.UserId, chatMessage.Content}
+			hub.broadcast <- Broadcast{chatMessage.ChatId, c.user.UserId, chatMessage.Content, time.Now(), 0}
+
+		case "recieve_messages":
+			fmt.Println("[READ_PUMP] Received messages")
+			go func(client *Client, message []byte) {
+				var request database.MessagesRequest
+				json.Unmarshal(message, &request)
+				messages, err := database.DBC.GetMessagesInChat(&request)
+				if err != nil {
+					fmt.Printf("[READ_PUMP] Cannot recieve messages: %v\n", err.Error())
+					return
+				}
+				var userIds []uint64
+				if request.ChatId == 0 {
+					hub.mutex.RLock()
+					for userId, _ := range hub.clients {
+						userIds = append(userIds,	userId)
+					}
+					hub.mutex.RUnlock()
+				} else {
+					var err error
+					userIds, err = database.DBC.GetChatMembers(request.ChatId)
+
+					if err != nil {
+						fmt.Printf("[READ_PUMP] Cannot find members of chat: %v\n", err.Error())
+					}
+				}
+
+				if !slices.Contains(userIds, client.user.UserId) {
+					fmt.Println("[READ_PUMP] Broadcasting requested for user that isn't in chat")
+					return
+				}
+				
+				for _, broadcast := range messages {
+					bytes, err := json.Marshal(Broadcast{
+						UserId: broadcast.SenderId,
+						Content: broadcast.Content,
+						ChatId: broadcast.ChatId,
+						CreatedAt: broadcast.CreatedAt,
+						MessageId: broadcast.MessageId,
+					})
+					if err != nil {
+						fmt.Printf("[READ_PUMP] Cannot marshal recieved message: %v\n", err.Error())
+					}
+					c.send <- bytes
+				}
+			} (c, message)
 
 		case "ping":
 			fmt.Printf("[READ_PUMP] Ping received from %s, sending pong\n", c.user.Username)
@@ -275,6 +344,7 @@ func (c *Client) writePump(hub *WebSocketHub) {
 			c.mu.Unlock()
 
 		case <-pingTicker.C:
+			fmt.Printf("[WRITE_PUMP] Start pinging %s\n", c.user.Username)
 			c.mu.Lock()
 			if c.closed {
 				c.mu.Unlock()

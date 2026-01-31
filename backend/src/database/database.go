@@ -255,7 +255,7 @@ func (dbc *DBController) GetMessagesInChat(request *MessagesRequest) ([]Message,
 	var err error
 	if request.FromMessageId == 0 {
 		err = dbc.db.Raw(`
-			SELECT * FROM messages WHERE chat_id = ? LIMIT ?
+			SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at DESC, message_id DESC LIMIT ?
 		`, request.ChatId, request.Limit).Find(&messages).Error
 	} else {
 		err = dbc.db.Raw(`

@@ -24,6 +24,7 @@ type Client struct {
 	mu     sync.Mutex
 	closed bool
 	user   database.User
+	clientId uint64
 }
 
 type WebSocketHub struct {
@@ -70,15 +71,16 @@ func (h *WebSocketHub) Run() {
 		case client := <-h.register:
 			fmt.Printf("[HUB] Registering client: %v\n", client)
 			h.mutex.Lock()
-			h.clients[client.user.UserId] = client
+			clientId := h.getUniqueClientId()
+			h.clients[clientId] = client
 			h.mutex.Unlock()
-			fmt.Printf("[HUB] Client registered. Total clients: %d\n", len(h.clients))
+			fmt.Printf("[HUB] Client registered on id %d. Total clients: %d\n", clientId, len(h.clients))
 
 		case client := <-h.unregister:
 			fmt.Printf("[HUB] Unregistering client: %v (username: %s)\n", client, client.user.Username)
 			h.mutex.Lock()
-			if h.clients[client.user.UserId] != nil {
-				h.clients[client.user.UserId] = nil
+			if h.clients[client.clientId] != nil {
+				h.clients[client.clientId] = nil
 				client.mu.Lock()
 				if !client.closed {
 					client.closed = true
@@ -94,21 +96,34 @@ func (h *WebSocketHub) Run() {
 		case broadcast := <-h.broadcast:
 			h.mutex.RLock()
 			fmt.Printf("[HUB] Starting broadcast to chat with chat_id: %d\n", broadcast.ChatId)
-			var userIds []uint64
+			var clientIds []uint64
+			var containsUser bool
 			if broadcast.ChatId == 0 {
-				for userId, _ := range h.clients {
-					userIds = append(userIds,	userId)
+				for clientId, _ := range h.clients {
+					clientIds = append(clientIds,	clientId)
 				}
+				containsUser = true
 			} else {
-				var err error
-				userIds, err = database.DBC.GetChatMembers(broadcast.ChatId)
+				userIds, err := database.DBC.GetChatMembers(broadcast.ChatId)
+				
+				containsUser = true
+				if !slices.Contains(userIds, broadcast.UserId) {
+					containsUser = false
+				}
+
+				for clientId, client := range h.clients {
+					fmt.Println(clientId, slices.Contains(userIds, client.user.UserId))
+					if slices.Contains(userIds, client.user.UserId) {
+						clientIds = append(clientIds,	clientId)
+					}
+				}
 
 				if err != nil {
 					fmt.Printf("[HUB] Broadcasting failed: %v\n", err.Error())
 				}
 			}
 
-			if !slices.Contains(userIds, broadcast.UserId) {
+			if !containsUser {
 				fmt.Println("[HUB] Broadcasting requested for user that isn't in chat")
 				h.mutex.RUnlock()
 				continue
@@ -129,8 +144,8 @@ func (h *WebSocketHub) Run() {
 				continue
 			}
 
-			for _, id := range userIds {
-				client := h.clients[id]
+			for _, clientId := range clientIds {
+				client := h.clients[clientId]
 				if client == nil {
 					continue
 				}
@@ -158,16 +173,11 @@ func (h *WebSocketHub) Run() {
 	}
 }
 
-/*
-func (h *WebSocketHub) broadcastSystemMessage(content string) {
-	fmt.Printf("[HUB] Broadcasting system message: %s\n", content)
-	msg := ChatMessage{
-		Content:   content,
-	}
-	bytes, _ := json.Marshal(msg)
-	h.broadcast <- Broadcast{0, 0, string(bytes)}
+func (h *WebSocketHub) getUniqueClientId() uint64 {
+	var i uint64 = 1
+	for ;h.clients[i]!=nil;i++ {}
+	return i
 }
-*/
 
 func (c *Client) readPump(hub *WebSocketHub) {
 	fmt.Printf("[READ_PUMP] Starting read pump for client\n")
@@ -234,23 +244,23 @@ func (c *Client) readPump(hub *WebSocketHub) {
 					fmt.Printf("[READ_PUMP] Cannot recieve messages: %v\n", err.Error())
 					return
 				}
-				var userIds []uint64
+				
+				containsUser := false
 				if request.ChatId == 0 {
-					hub.mutex.RLock()
-					for userId, _ := range hub.clients {
-						userIds = append(userIds,	userId)
-					}
-					hub.mutex.RUnlock()
+					containsUser = true	
 				} else {
-					var err error
-					userIds, err = database.DBC.GetChatMembers(request.ChatId)
+					userIds, err := database.DBC.GetChatMembers(request.ChatId)
 
 					if err != nil {
 						fmt.Printf("[READ_PUMP] Cannot find members of chat: %v\n", err.Error())
+					} else {
+						if slices.Contains(userIds, client.user.UserId) {
+							containsUser = true
+						}
 					}
 				}
 
-				if !slices.Contains(userIds, client.user.UserId) {
+				if !containsUser {
 					fmt.Println("[READ_PUMP] Broadcasting requested for user that isn't in chat")
 					return
 				}

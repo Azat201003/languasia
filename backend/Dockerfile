@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY src ./src
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /build/main.out ./src
+RUN CGO_ENABLED=0 GOOS=linux go build -o /build/main.out ./src/cmd
 RUN ls
 RUN pwd
 

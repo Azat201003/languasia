@@ -29,12 +29,18 @@ func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			return jwt.ParseEdPublicKeyFromPEM(publicKey)
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
+	
+		if err == nil {
+			userIdString, err := token.Claims.GetIssuer()
 
-		userIdString, err := token.Claims.GetIssuer()
+			if err == nil {
+				userId, err := strconv.ParseUint(userIdString, 10, 64)
 
-		userId, err := strconv.ParseUint(userIdString, 10, 64)
-
-		c.Set("user_id", userId)
+				if err == nil {
+					c.Set("user_id", userId)
+				}
+			}
+		}
 
 		return next(c)
 	}

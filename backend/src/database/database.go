@@ -72,6 +72,8 @@ type UserFilter struct {
 	HobbieIds        []string `json:"hobbies"`
 	KnownLanguageIds []string `json:"known_languages"`
 	LearnLanguageIds []string `json:"learn_languages"`
+	PageSize uint64 `json:"page_size"`
+	PageNumber uint64 `json:"page_number"`
 }
 
 type Users []struct {
@@ -161,10 +163,12 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 		`, filter.UserId)
 	}
 
-	query += `
+	query += fmt.Sprintf(`
 		)
-		ORDER BY COALESCE(2*sml1 + sml2,0) DESC
-	`
+		ORDER BY 2*sml1+COALESCE(sml2,0) DESC
+		OFFSET %v*%v
+		LIMIT %v
+	`, filter.PageNumber-1, filter.PageSize, filter.PageSize)
 
 	fmt.Println(query)
 

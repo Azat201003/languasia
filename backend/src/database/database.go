@@ -165,7 +165,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 
 	query += fmt.Sprintf(`
 		)
-		ORDER BY 2*sml1+COALESCE(sml2,0) DESC, id ASC
+		ORDER BY 2*sml1+COALESCE(sml2,0) DESC, user_id ASC
 		OFFSET %v*%v
 		LIMIT %v
 	`, max(filter.PageNumber, uint64(1))-1, filter.PageSize, max(filter.PageSize, uint64(1)))

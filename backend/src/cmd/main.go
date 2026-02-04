@@ -31,7 +31,7 @@ func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			return jwt.ParseEdPublicKeyFromPEM(publicKey)
 		}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
-	
+
 		if err == nil {
 			userIdString, err := token.Claims.GetIssuer()
 

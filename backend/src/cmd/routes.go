@@ -14,6 +14,8 @@ import (
 	"github.com/Azat201003/languasia/backend/src/database"
 )
 
+const MAX_PAGE_SIZE = 1000
+
 type creditionals struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -158,6 +160,10 @@ func recieveFilteredUsers(c *echo.Context) error {
 
 	if err := c.Bind(filter); err != nil {
 		return err
+	}
+
+	if filter.PageSize > MAX_PAGE_SIZE {
+		return c.String(http.StatusBadRequest, "Page size limit exceeded")
 	}
 
 	users, err := database.DBC.RecieveFilteredUsers(filter)

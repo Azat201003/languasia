@@ -68,12 +68,12 @@ func (dbc *DBController) UserByRefreshToken(user *User) error {
 
 type UserFilter struct {
 	UserId           uint64   `json:"user_id"`
-	SearchString		 string   `json:"search_string"`
+	SearchString     string   `json:"search_string"`
 	HobbieIds        []string `json:"hobbies"`
 	KnownLanguageIds []string `json:"known_languages"`
 	LearnLanguageIds []string `json:"learn_languages"`
-	PageSize uint64 `json:"page_size"`
-	PageNumber uint64 `json:"page_number"`
+	PageSize         uint64   `json:"page_size"`
+	PageNumber       uint64   `json:"page_number"`
 }
 
 type Users []struct {

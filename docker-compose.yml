@@ -2,8 +2,8 @@ services:
   app:
     build: backend/
     container_name: languasia-app
-    ports:
-      - "8080:8080"
+    expose: 
+      - "8080"
     environment:
       DB_HOST: "database"
     networks:
@@ -46,7 +46,6 @@ services:
     restart: always
     networks:
       - languasia-network
-
 
 networks:
   languasia-network:

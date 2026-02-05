@@ -199,6 +199,7 @@ func (dbc *DBController) UpdadateUser(user *User) error {
 
 	query += "WHERE user_id = ?"
 	args = append(args, user.UserId)
+    fmt.Println(query, args)
 	return dbc.db.Exec(query, args...).Error
 }
 

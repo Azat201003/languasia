@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    build: backend/
     container_name: languasia-app
     ports:
       - "8080:8080"

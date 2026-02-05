@@ -69,6 +69,11 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(authMiddlware)
 
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
+    	}))
+
 	e.GET("/ping", func(c *echo.Context) error {
 		return c.String(http.StatusOK, "pong")
 	})

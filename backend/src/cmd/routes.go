@@ -254,6 +254,12 @@ func updateUser(c *echo.Context) error {
 		return err
 	}
 
+	if len(request.Password) < 2 {
+		return c.String(http.StatusBadRequest, "Bad password: too short")
+	}
+
+    fmt.Printf("Update user password: %v\n", request.Password)
+
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("Cannot get hash of password: %v", err.Error()))

@@ -83,6 +83,8 @@ func main() {
 	e.DELETE("/users/:user_id/languages/:language_id", deleteLanguage)
 	e.POST("/users/:user_id/hobbies", addHobby)
 	e.DELETE("/users/:user_id/hobbies/:hobby_id", deleteHobby)
+	e.GET("/languages", getListLanguages)
+	e.GET("/hobbies", getListHobbies)
 
 	e.GET("/ws", connectWebSocket)
 

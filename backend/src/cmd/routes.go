@@ -279,7 +279,7 @@ func updateUser(c *echo.Context) error {
 }
 
 func addLanguage(c *echo.Context) error {
-	request := new(database.Language)
+	request := new(database.UserLanguage)
 	if err := c.Bind(request); err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse language data: %v", err.Error()))
 		return err
@@ -317,7 +317,7 @@ func deleteLanguage(c *echo.Context) error {
 }
 
 func addHobby(c *echo.Context) error {
-	request := new(database.Hobby)
+	request := new(database.UserHobby)
 	if err := c.Bind(request); err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse language data: %v", err.Error()))
 		return err
@@ -353,3 +353,20 @@ func deleteHobby(c *echo.Context) error {
 
 	return database.DBC.DeleteHobby(userId, hobbyId)
 }
+
+func getListLanguages(c *echo.Context) error {
+	languages, err := database.DBC.GetLanguagesList()
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("Cannot get list of languages: %v", err.Error()))
+	}
+	return c.JSON(http.StatusOK, languages)
+}
+
+func getListHobbies(c *echo.Context) error {
+	hobbies, err := database.DBC.GetHobbiesList()
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("Cannot get list of hobbies: %v", err.Error()))
+	}
+	return c.JSON(http.StatusOK, hobbies)
+}
+

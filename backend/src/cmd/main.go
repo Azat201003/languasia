@@ -1,4 +1,4 @@
-// TODO add pagination for user
+// TODO add get of languages and hobby lists
 
 package main
 

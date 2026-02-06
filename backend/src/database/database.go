@@ -209,11 +209,22 @@ func (dbc *DBController) DeleteLanguage(userId, languageId uint64) error {
 
 type Language struct {
 	LanguageId uint64 `json:"language_id"`
+	Name string `json:"name"`
+}
+
+func (dbc *DBController) GetLanguagesList() ([]Language, error) {
+	var languages []Language
+	err := dbc.db.Raw("SELECT * FROM languages").Find(&languages).Error
+	return languages, err
+}
+
+type UserLanguage struct {
+	LanguageId uint64 `json:"language_id"`
 	UserId     uint64
 	IsKnown    bool `json:"is_known"`
 }
 
-func (dbc *DBController) AddLanguage(language *Language) error {
+func (dbc *DBController) AddLanguage(language *UserLanguage) error {
 	return dbc.db.Exec(
 		"INSERT INTO user_languages (user_id, language_id, is_known) VALUES (?, ?, ?)",
 		language.UserId,
@@ -227,11 +238,22 @@ func (dbc *DBController) DeleteHobby(userId, hobbyId uint64) error {
 }
 
 type Hobby struct {
+	Title string `json:"title"`
+	HobbyId uint64 `json:"hobby_id"`
+}
+
+func (dbc *DBController) GetHobbiesList() ([]Hobby, error) {
+	var hobbies []Hobby
+	err := dbc.db.Raw("SELECT * FROM hobbies").Find(&hobbies).Error
+	return hobbies, err
+}
+
+type UserHobby struct {
 	HobbyId uint64 `json:"hobby_id"`
 	UserId  uint64
 }
 
-func (dbc *DBController) AddHobby(hobby *Hobby) error {
+func (dbc *DBController) AddHobby(hobby *UserHobby) error {
 	return dbc.db.Exec(
 		"INSERT INTO user_languages (user_id, hobby_id) VALUES (?, ?, ?)",
 		hobby.UserId,

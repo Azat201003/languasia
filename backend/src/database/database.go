@@ -19,6 +19,8 @@ const RefreshTokenLength = 256
 type User struct {
 	UserId       uint64 `gorm:"primaryKey"`
 	Username     string
+    Nickname     string
+    Color        string
 	PasswordHash []byte `gorm:"type:bytea"`
 	RefreshToken string
 	Description  string // Bio
@@ -40,7 +42,8 @@ func (dbc *DBController) ConnectDB() error {
 
 func (dbc *DBController) RegisterUser(user *User) error {
 	return dbc.db.Exec(
-		"INSERT INTO users (username, password_hash, refresh_token) VALUES (?, ?, ?)",
+		"INSERT INTO users (username, nickname, password_hash, refresh_token) VALUES (?, ?, ?, ?)",
+		user.Username,
 		user.Username,
 		user.PasswordHash,
 		GenerateRefreshToken(),
@@ -79,6 +82,8 @@ type UserFilter struct {
 type Users []struct {
 	UserId             uint64         `json:"user_id"`
 	Username           string         `json:"username"`
+    Nickname           string         `json:"nickname"`
+    Color              string         `json:"color"`
 	Description        string         `json:"description"`
 	HobbyTitles        pq.StringArray `json:"hobby_titles" gorm:"type:text[]"`
 	KnownLanguageNames pq.StringArray `json:"known_language_names" gorm:"type:text[]"`
@@ -94,8 +99,11 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 				u.user_id,
 				u.username,
 				u.description,
+                u.nickname,
+                u.color,
 				similarity(u.username, '%v') AS sml1,
-				similarity(u.description, '%v') AS sml2,
+				similarity(u.nickname, '%v') AS sml2,
+				similarity(u.description, '%v') AS sml3,
 				COALESCE(h.hobby_titles, '{}') AS hobby_titles,
 				COALESCE(kl.known_language_names, '{}') AS known_language_names,
 				COALESCE(ll.learn_language_names, '{}') AS learn_language_names
@@ -119,17 +127,17 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 					WHERE ul.user_id = u.user_id AND ul.is_known = false
 			) ll ON true
 			WHERE true
-	`, filter.SearchString, filter.SearchString)
+	`, filter.SearchString, filter.SearchString, filter.SearchString)
 
 	if len(filter.HobbieIds) > 0 {
 		query += fmt.Sprintf(`
-			AND EXISTS (
-					SELECT 1
-					FROM user_hobbies ul2
-					JOIN hobbies l2 ON l2.hobby_id = ul2.hobby_id
-					WHERE ul2.user_id = u.user_id 
-							AND l2.hobby_id IN (%v)
-			)
+                AND EXISTS (
+                        SELECT 1
+                        FROM user_hobbies ul2
+                        JOIN hobbies l2 ON l2.hobby_id = ul2.hobby_id
+                        WHERE ul2.user_id = u.user_id 
+                                AND l2.hobby_id IN (%v)
+                )
 		`, strings.Join(filter.HobbieIds, ", "))
 	}
 	if len(filter.KnownLanguageIds) > 0 {
@@ -165,7 +173,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 
 	query += fmt.Sprintf(`
 		)
-		ORDER BY 2*sml1+COALESCE(sml2,0) DESC, user_id ASC
+		ORDER BY 2*sml1+COALESCE(sml2,0)+COALESCE(sml3,0) DESC, user_id ASC
 		OFFSET %v*%v
 		LIMIT %v
 	`, max(filter.PageNumber, uint64(1))-1, filter.PageSize, max(filter.PageSize, uint64(1)))
@@ -179,13 +187,12 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 func (dbc *DBController) UpdadateUser(user *User) error {
 	query := "UPDATE users "
 	var args []any
-
-	if user.Description != "" || len(user.PasswordHash) != 0 {
-		query += "SET "
-	}
+	
+    query += "SET user_id = ?"
+    args = append(args, user.UserId)
 
 	if len(user.PasswordHash) != 0 {
-		query += "password_hash = ? "
+		query += ", password_hash = ? "
 		args = append(args, user.PasswordHash)
 		if user.Description != "" {
 			query += ", "
@@ -193,8 +200,18 @@ func (dbc *DBController) UpdadateUser(user *User) error {
 	}
 
 	if user.Description != "" {
-		query += "description = ? "
+		query += ", description = ? "
 		args = append(args, user.Description)
+	}
+
+	if user.Nickname != "" {
+		query += ", nickname = ? "
+		args = append(args, user.Nickname)
+	}
+
+	if user.Color != "" {
+		query += ", color = ? "
+		args = append(args, user.Color)
 	}
 
 	query += "WHERE user_id = ?"

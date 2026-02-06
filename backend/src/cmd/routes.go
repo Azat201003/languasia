@@ -233,6 +233,8 @@ func deleteUser(c *echo.Context) error {
 type updateUserRequest struct {
 	Description string `json:"description"`
 	Password    string `json:"password"`
+    Nickname    string `json:"nickname"`
+    Color       string `json:"color"`
 }
 
 func updateUser(c *echo.Context) error {
@@ -254,7 +256,7 @@ func updateUser(c *echo.Context) error {
 		return err
 	}
 
-	if len(request.Password) < 2 {
+	if len(request.Password) < 2 && request.Password != "" {
 		return c.String(http.StatusBadRequest, "Bad password: too short")
 	}
 
@@ -270,6 +272,8 @@ func updateUser(c *echo.Context) error {
 		UserId:       userId,
 		PasswordHash: passwordHash,
 		Description:  request.Description,
+        Nickname:     request.Nickname,
+        Color:        request.Color,
 	})
 	if err != nil {
 		return err

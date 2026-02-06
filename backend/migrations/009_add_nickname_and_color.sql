@@ -1,0 +1,5 @@
+ALTER TABLE users ADD COLUMN color VARCHAR(7) CHECK (color ~* '^#[a-f0-9]{6}$');
+ALTER TABLE users add COLUMN nickname VARCHAR(32);
+ALTER TABLE users ALTER COLUMN nickname SET NOT NULL;
+ALTER TABLE users ALTER COLUMN color SET NOT NULL;
+ALTER TABLE users ALTER COLUMN color SET DEFAULT '#bfe3e2';

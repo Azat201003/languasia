@@ -1,5 +1,3 @@
-// TODO add get of languages and hobby lists
-
 package main
 
 import (

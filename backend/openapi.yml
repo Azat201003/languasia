@@ -1,423 +1,13 @@
 openapi: 3.0.3
 info:
   title: Languasia Backend API
-  description: |
-    A language learning and social platform API that connects users based on language skills and hobbies.
-    Features include user management, authentication, language/hobby tracking, and WebSocket communication.
+  description: Language learning social platform backend API
   version: 1.0.0
   contact:
-    name: API Support
-    email: support@languasia.com
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-
+    name: Azat201003
 servers:
   - url: http://localhost:8080
     description: Local development server
-  - url: https://api.languasia.com/v1
-    description: Production server
-
-tags:
-  - name: Authentication
-    description: User registration, login, and token management
-  - name: Users
-    description: User profile management and discovery
-  - name: Languages
-    description: User language skill management
-  - name: Hobbies
-    description: User hobby management
-  - name: WebSocket
-    description: Real-time communication
-
-paths:
-  /ping:
-    get:
-      tags:
-        - Health
-      summary: Health check endpoint
-      description: Simple endpoint to verify the server is running
-      operationId: ping
-      responses:
-        '200':
-          description: Server is healthy and responding
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "pong"
-
-  /register:
-    post:
-      tags:
-        - Authentication
-      summary: Register a new user
-      description: Create a new user account with username and password
-      operationId: register
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Credentials'
-            example:
-              username: "john_doe"
-              password: "securePassword123"
-      responses:
-        '200':
-          description: User successfully registered
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "Registered"
-        '400':
-          description: Invalid request data or password too short
-        '422':
-          description: Cannot create user (e.g., username already exists)
-
-  /login:
-    post:
-      tags:
-        - Authentication
-      summary: Authenticate user
-      description: Login with username and password to receive JWT and refresh tokens
-      operationId: login
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Credentials'
-            example:
-              username: "john_doe"
-              password: "securePassword123"
-      responses:
-        '200':
-          description: Authentication successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthTokens'
-        '401':
-          description: Invalid credentials
-        '422':
-          description: User not found
-        '500':
-          description: Server error during token generation
-
-  /refresh:
-    post:
-      tags:
-        - Authentication
-      summary: Refresh authentication tokens
-      description: Use refresh token to obtain new JWT token
-      operationId: refresh
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshRequest'
-            example:
-              refresh_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-      responses:
-        '200':
-          description: New tokens generated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthTokens'
-        '401':
-          description: Invalid or expired refresh token
-        '500':
-          description: Server error during token generation
-
-  /users:
-    get:
-      tags:
-        - Users
-      summary: Get filtered users
-      description: |
-        Search for users based on various criteria including username, hobbies, and language skills.
-        Returns detailed user profiles with their associated languages and hobbies.
-      operationId: getFilteredUsers
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: query
-          name: user_id
-          schema:
-            type: integer
-            format: uint64
-          description: Filter by specific user ID
-        - in: query
-          name: username_contains
-          schema:
-            type: string
-          description: Filter by username containing this substring (case-insensitive)
-        - in: query
-          name: hobbies
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: false
-          description: Filter by hobby IDs
-        - in: query
-          name: known_languages
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: false
-          description: Filter by known language IDs
-        - in: query
-          name: learn_languages
-          schema:
-            type: array
-            items:
-              type: string
-          style: form
-          explode: false
-          description: Filter by learning language IDs
-      responses:
-        '200':
-          description: List of users matching the filter criteria
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/UserProfile'
-        '400':
-          description: Invalid filter parameters
-        '401':
-          description: Missing or invalid authentication token
-
-  /users/{user_id}:
-    delete:
-      tags:
-        - Users
-      summary: Delete user account
-      description: Permanently delete a user account. User can only delete their own account.
-      operationId: deleteUser
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the user to delete
-      responses:
-        '200':
-          description: User successfully deleted
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "User successfully deleted"
-        '400':
-          description: Invalid user ID format
-        '401':
-          description: Not authorized to delete this user
-        '418':
-          description: Cannot delete user (tea reference for internal errors)
-
-    patch:
-      tags:
-        - Users
-      summary: Update user profile
-      description: Update user's description and/or password
-      operationId: updateUser
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the user to update
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateUserRequest'
-            example:
-              description: "I love learning languages and meeting new people!"
-              password: "newSecurePassword456"
-      responses:
-        '200':
-          description: User successfully updated
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "Successfully updated"
-        '400':
-          description: Invalid user ID or request data
-        '401':
-          description: Not authorized to update this user
-        '422':
-          description: Cannot process password hash
-
-  /users/{user_id}/languages:
-    post:
-      tags:
-        - Languages
-      summary: Add a language to user profile
-      description: Add a language that the user knows or wants to learn
-      operationId: addLanguage
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the user adding the language
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Language'
-            example:
-              language_id: 1
-              is_known: true
-      responses:
-        '200':
-          description: Language successfully added
-        '400':
-          description: Invalid user ID or language data
-        '401':
-          description: Not authorized to modify this user's languages
-
-  /users/{user_id}/languages/{language_id}:
-    delete:
-      tags:
-        - Languages
-      summary: Remove a language from user profile
-      description: Remove a language entry from user's profile
-      operationId: deleteLanguage
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the user
-        - in: path
-          name: language_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the language to remove
-      responses:
-        '200':
-          description: Language successfully removed
-        '400':
-          description: Invalid user ID or language ID
-        '401':
-          description: Not authorized to modify this user's languages
-
-  /users/{user_id}/hobbies:
-    post:
-      tags:
-        - Hobbies
-      summary: Add a hobby to user profile
-      description: Add a hobby to user's profile
-      operationId: addHobby
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the user adding the hobby
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Hobby'
-            example:
-              hobby_id: 3
-      responses:
-        '200':
-          description: Hobby successfully added
-        '400':
-          description: Invalid user ID or hobby data
-        '401':
-          description: Not authorized to modify this user's hobbies
-
-  /users/{user_id}/hobbies/{hobby_id}:
-    delete:
-      tags:
-        - Hobbies
-      summary: Remove a hobby from user profile
-      description: Remove a hobby from user's profile
-      operationId: deleteHobby
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: user_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the user
-        - in: path
-          name: hobby_id
-          required: true
-          schema:
-            type: integer
-            format: uint64
-          description: ID of the hobby to remove
-      responses:
-        '200':
-          description: Hobby successfully removed
-        '400':
-          description: Invalid user ID or hobby ID
-        '401':
-          description: Not authorized to modify this user's hobbies
-
-  /ws:
-    get:
-      tags:
-        - WebSocket
-      summary: Establish WebSocket connection
-      description: |
-        Upgrade HTTP connection to WebSocket for real-time communication.
-        Requires valid JWT authentication. User profile will be attached to the WebSocket connection.
-      operationId: connectWebSocket
-      security:
-        - BearerAuth: []
-      responses:
-        '101':
-          description: Switching Protocols - WebSocket connection established
-        '400':
-          description: User not found
-        '401':
-          description: Missing or invalid authentication token
 
 components:
   securitySchemes:
@@ -425,11 +15,82 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: |
-        JWT token obtained from /login or /refresh endpoints.
-        Token must be included in Authorization header as "Bearer {token}"
-
+  
   schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          example: 123
+        username:
+          type: string
+          example: "johndoe"
+        nickname:
+          type: string
+          example: "John"
+        color:
+          type: string
+          example: "#FF0000"
+        description:
+          type: string
+          example: "Language enthusiast"
+        hobby_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [1, 2, 3]
+        known_language_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [1, 2]
+        learn_language_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [3, 4]
+      required:
+        - user_id
+        - username
+
+    UserFilter:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        search_string:
+          type: string
+          example: "john"
+        hobbies:
+          type: array
+          items:
+            type: integer
+            format: int64
+        known_languages:
+          type: array
+          items:
+            type: integer
+            format: int64
+        learn_languages:
+          type: array
+          items:
+            type: integer
+            format: int64
+        page_size:
+          type: integer
+          format: int64
+          maximum: 1000
+        page_number:
+          type: integer
+          format: int64
+          default: 1
+
     Credentials:
       type: object
       required:
@@ -438,29 +99,21 @@ components:
       properties:
         username:
           type: string
-          description: Username for authentication
-          minLength: 1
-          maxLength: 50
-          example: "john_doe"
+          example: "johndoe"
         password:
           type: string
-          description: User's password
-          minLength: 2
-          maxLength: 100
-          example: "securePassword123"
           format: password
+          minLength: 2
 
-    AuthTokens:
+    AuthResponse:
       type: object
       properties:
         refresh_token:
           type: string
-          description: Refresh token for obtaining new JWT tokens
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          example: "abc123...xyz"
         jwt_token:
           type: string
-          description: JWT token for API authentication (valid for 1 hour)
-          example: "eyJhbGciOiJEdDl9..."
+          example: "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."
 
     RefreshRequest:
       type: object
@@ -469,61 +122,42 @@ components:
       properties:
         refresh_token:
           type: string
-          description: Refresh token obtained during login
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          example: "abc123...xyz"
 
     UpdateUserRequest:
       type: object
       properties:
         description:
           type: string
-          description: User's bio/description
-          maxLength: 500
-          example: "Passionate language learner from Spain"
+          example: "Updated bio"
         password:
           type: string
-          description: New password (optional)
-          minLength: 2
-          maxLength: 100
-          example: "newSecurePassword456"
           format: password
-
-    UserProfile:
-      type: object
-      properties:
-        user_id:
-          type: integer
-          format: uint64
-          description: Unique user identifier
-          example: 123
-        username:
+          minLength: 2
+        nickname:
           type: string
-          description: User's username
-          example: "john_doe"
-        description:
+          example: "NewNickname"
+        color:
           type: string
-          description: User's bio/description
-          example: "Language enthusiast from New York"
-        hobby_titles:
+          example: "#00FF00"
+        add_hobbies:
           type: array
           items:
-            type: string
-          description: List of user's hobbies
-          example: ["hiking", "reading", "photography"]
-        known_language_names:
+            $ref: '#/components/schemas/UserHobby'
+        delete_hobbies:
           type: array
           items:
-            type: string
-          description: Languages the user knows
-          example: ["English", "Spanish"]
-        learn_language_names:
+            $ref: '#/components/schemas/UserHobby'
+        add_languages:
           type: array
           items:
-            type: string
-          description: Languages the user wants to learn
-          example: ["Japanese", "French"]
+            $ref: '#/components/schemas/UserLanguage'
+        delete_languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserLanguage'
 
-    Language:
+    UserLanguage:
       type: object
       required:
         - language_id
@@ -531,32 +165,598 @@ components:
       properties:
         language_id:
           type: integer
-          format: uint64
-          description: ID of the language
+          format: int64
           example: 1
         is_known:
           type: boolean
-          description: True if user knows this language, false if learning
           example: true
 
-    Hobby:
+    UserHobby:
       type: object
       required:
         - hobby_id
       properties:
         hobby_id:
           type: integer
-          format: uint64
-          description: ID of the hobby
-          example: 3
+          format: int64
+          example: 1
+
+    Language:
+      type: object
+      properties:
+        language_id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "English"
+
+    Hobby:
+      type: object
+      properties:
+        hobby_id:
+          type: integer
+          format: int64
+          example: 1
+        title:
+          type: string
+          example: "Reading"
+
+    Chat:
+      type: object
+      properties:
+        chat_id:
+          type: integer
+          format: int64
+          example: 1
+        title:
+          type: string
+          example: "Language Exchange Group"
+        type:
+          type: string
+          example: "group"
+        member_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          example: [123, 456]
 
     Error:
       type: object
       properties:
-        error:
+        message:
           type: string
-          description: Error message
-          example: "Invalid user ID format"
+          example: "Error description"
 
-security:
-  - BearerAuth: []
+paths:
+  /ping:
+    get:
+      summary: Health check endpoint
+      operationId: ping
+      responses:
+        '200':
+          description: Server is running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "pong"
+
+  /register:
+    post:
+      summary: Register a new user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Registered"
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /login:
+    post:
+      summary: Login user and get tokens
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /refresh:
+    post:
+      summary: Refresh JWT token using refresh token
+      operationId: refresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users:
+    get:
+      summary: Get filtered list of users
+      operationId: recieveFilteredUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: search_string
+          schema:
+            type: string
+        - in: query
+          name: hobbies
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+          explode: false
+          style: form
+        - in: query
+          name: known_languages
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+          explode: false
+          style: form
+        - in: query
+          name: learn_languages
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+          explode: false
+          style: form
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            format: int64
+            maximum: 1000
+        - in: query
+          name: page_number
+          schema:
+            type: integer
+            format: int64
+            default: 1
+      responses:
+        '200':
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid filter parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+        description: ID of the user
+    
+    delete:
+      summary: Delete a user
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "User succefully deleted"
+        '400':
+          description: Invalid user ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '418':
+          description: Cannot delete user (Teapot error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    patch:
+      summary: Update user information
+      operationId: updateUser
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Succesfully updated"
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}/languages:
+    post:
+      summary: Add a language to user's profile
+      operationId: addLanguage
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLanguage'
+      responses:
+        '200':
+          description: Language added successfully
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}/languages/{language_id}:
+    delete:
+      summary: Remove a language from user's profile
+      operationId: deleteLanguage
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: language_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Language removed successfully
+        '400':
+          description: Invalid user_id or language_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}/hobbies:
+    post:
+      summary: Add a hobby to user's profile
+      operationId: addHobby
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserHobby'
+      responses:
+        '200':
+          description: Hobby added successfully
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}/hobbies/{hobby_id}:
+    delete:
+      summary: Remove a hobby from user's profile
+      operationId: deleteHobby
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: hobby_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Hobby removed successfully
+        '400':
+          description: Invalid user_id or hobby_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /languages:
+    get:
+      summary: Get list of all languages
+      operationId: getListLanguages
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of languages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Language'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /hobbies:
+    get:
+      summary: Get list of all hobbies
+      operationId: getListHobbies
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of hobbies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Hobby'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}/chats:
+    get:
+      summary: Get user's chat list
+      operationId: getChatList
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Chat list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chat'
+        '400':
+          description: Invalid user ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}/chats/{chat_id}:
+    get:
+      summary: Get specific chat details
+      operationId: getChat
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: chat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Chat details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        '400':
+          description: Invalid user_id or chat_id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - token user_id and path user_id don't match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: User is not a member of this chat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ws:
+    get:
+      summary: WebSocket connection endpoint for real-time communication
+      operationId: connectWebSocket
+      security:
+        - BearerAuth: []
+      responses:
+        '101':
+          description: Switching Protocols to WebSocket
+        '400':
+          description: Cannot find user or invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

@@ -84,6 +84,9 @@ func main() {
 	e.GET("/languages", getListLanguages)
 	e.GET("/hobbies", getListHobbies)
 
+	e.GET("/users/:user_id/chats", getChatList)
+	e.GET("/users/:user_id/chats/:chat_id", getChat)
+
 	e.GET("/ws", connectWebSocket)
 
 	if err := e.Start(":8080"); err != nil {

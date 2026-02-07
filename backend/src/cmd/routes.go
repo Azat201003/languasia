@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 
@@ -233,8 +234,12 @@ func deleteUser(c *echo.Context) error {
 type updateUserRequest struct {
 	Description string `json:"description"`
 	Password    string `json:"password"`
-    Nickname    string `json:"nickname"`
-    Color       string `json:"color"`
+	Nickname    string `json:"nickname"`
+	Color       string `json:"color"`
+	AddHobbyIds []database.UserHobby `json:"add_hobby_ids"`
+	DeleteHobbyIds []database.UserHobby `json:"delete_hobby_ids"`
+	AddLanguageIds []database.UserLanguage `json:"add_language_ids"`
+	DeleteLanguageIds []database.UserLanguage `json:"delete_language_ids"`
 }
 
 func updateUser(c *echo.Context) error {
@@ -260,12 +265,16 @@ func updateUser(c *echo.Context) error {
 		return c.String(http.StatusBadRequest, "Bad password: too short")
 	}
 
-    fmt.Printf("Update user password: %v\n", request.Password)
+	fmt.Printf("Update user password: %v\n", request.Password)
+	
+	var passwordHash []byte
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.String(http.StatusUnprocessableEntity, fmt.Sprintf("Cannot get hash of password: %v", err.Error()))
-		return err
+	if request.Password != "" {
+		passwordHash, err = bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.String(http.StatusUnprocessableEntity, fmt.Sprintf("Cannot get hash of password: %v", err.Error()))
+			return err
+		}
 	}
 
 	err = database.DBC.UpdadateUser(&database.User{
@@ -274,7 +283,8 @@ func updateUser(c *echo.Context) error {
 		Description:  request.Description,
         Nickname:     request.Nickname,
         Color:        request.Color,
-	})
+	}, request.AddLanguageIds, request.DeleteLanguageIds, request.AddHobbyIds, request.DeleteHobbyIds)
+
 	if err != nil {
 		return err
 	}
@@ -317,7 +327,7 @@ func deleteLanguage(c *echo.Context) error {
 		return err
 	}
 
-	return database.DBC.DeleteLanguage(userId, languageId)
+	return database.DBC.DeleteLanguage(&database.UserLanguage{UserId: userId, LanguageId: languageId})
 }
 
 func addHobby(c *echo.Context) error {
@@ -355,7 +365,7 @@ func deleteHobby(c *echo.Context) error {
 		return err
 	}
 
-	return database.DBC.DeleteHobby(userId, hobbyId)
+	return database.DBC.DeleteHobby(&database.UserHobby{UserId: userId, HobbyId: hobbyId})
 }
 
 func getListLanguages(c *echo.Context) error {
@@ -372,5 +382,63 @@ func getListHobbies(c *echo.Context) error {
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("Cannot get list of hobbies: %v", err.Error()))
 	}
 	return c.JSON(http.StatusOK, hobbies)
+}
+
+func getChatList(c *echo.Context) error {	
+	userIdString := c.ParamOr("user_id", "0")
+
+	userId, err := strconv.ParseUint(userIdString, 10, 64)
+	if err != nil {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse user_id: %v", err.Error()))
+		return err
+	}
+
+	if c.Get("user_id") != userId {
+		return c.String(http.StatusUnauthorized, fmt.Sprintf("Token's user_id and put user_id not match: %v != %v", userId, c.Get("user_id")))
+	}
+
+	chats, err := database.DBC.MyChats(userId)
+	if err != nil {
+		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot get chat list: %v", err.Error()))
+	}
+	return c.JSON(http.StatusOK, chats)
+}
+
+func getChat(c *echo.Context) error {	
+	userIdString := c.ParamOr("user_id", "0")
+
+	userId, err := strconv.ParseUint(userIdString, 10, 64)
+	if err != nil {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse user_id: %v", err.Error()))
+		return err
+	}
+
+	if c.Get("user_id") != userId {
+		return c.String(http.StatusUnauthorized, fmt.Sprintf("Token's user_id and put user_id not match: %v != %v", userId, c.Get("user_id")))
+	}
+
+	chatIdString := c.ParamOr("chat_id", "0")
+
+	chatId, err := strconv.ParseUint(chatIdString, 10, 64)
+	
+	if err != nil {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse chat_id: %v", err.Error()))
+		return err
+	}
+
+	chat, err := database.DBC.GetChat(chatId)
+	if err != nil {
+		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot get members: %v", err.Error()))
+	}
+
+	var memberIds []int64
+	memberIds = []int64(chat.MemberIds)
+	//	return c.String(http.StatusInternalServerError, fmt.Sprintf("Cannot scan memberIds: %v", err))
+	//}
+	if !slices.Contains(memberIds, int64(userId)) {
+		return c.String(http.StatusForbidden, "User is not member of this chat")
+	}
+
+	return c.JSON(http.StatusOK, chat)
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"strconv"
 	"time"
 
 	"github.com/lib/pq"
@@ -74,9 +75,9 @@ func (dbc *DBController) UserByRefreshToken(user *User) error {
 type UserFilter struct {
 	UserId           uint64   `json:"user_id"`
 	SearchString     string   `json:"search_string"`
-	HobbieIds        []string `json:"hobbies"`
-	KnownLanguageIds []string `json:"known_languages"`
-	LearnLanguageIds []string `json:"learn_languages"`
+	HobbieIds        []uint64 `json:"hobbies"`
+	KnownLanguageIds []uint64 `json:"known_languages"`
+	LearnLanguageIds []uint64 `json:"learn_languages"`
 	PageSize         uint64   `json:"page_size"`
 	PageNumber       uint64   `json:"page_number"`
 }
@@ -87,17 +88,50 @@ type Users []struct {
 	Nickname           string         `json:"nickname"`
 	Color              string         `json:"color"`
 	Description        string         `json:"description"`
-	HobbyTitles        pq.StringArray `json:"hobby_titles" gorm:"type:text[]"`
-	KnownLanguageNames pq.StringArray `json:"known_language_names" gorm:"type:text[]"`
-	LearnLanguageNames pq.StringArray `json:"learn_language_names" gorm:"type:text[]"`
+	HobbyIds        pq.Int64Array `json:"hobby_title_ids" gorm:"type:serial[]"`
+	KnownLanguageIds pq.Int64Array `json:"known_language_ids" gorm:"type:serial[]"`
+	LearnLanguageIds pq.Int64Array `json:"learn_language_ids" gorm:"type:serial[]"`
 }
 
 func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error) {
 	var result Users
 
+	// Build array strings for WHERE conditions
+	var hobbyArrayStr, knownLangArrayStr, learnLangArrayStr string
+	
+	if len(filter.HobbieIds) > 0 {
+		hobbyIdStrings := make([]string, len(filter.HobbieIds))
+		for i := 0; i < len(filter.HobbieIds); i++ {
+			hobbyIdStrings[i] = strconv.FormatUint(filter.HobbieIds[i], 10)
+		}
+		hobbyArrayStr = "ARRAY[" + strings.Join(hobbyIdStrings, ",") + "]"
+	} else {
+		hobbyArrayStr = "ARRAY[]::bigint[]"
+	}
+
+	if len(filter.KnownLanguageIds) > 0 {
+		knownLanguageIdStrings := make([]string, len(filter.KnownLanguageIds))
+		for i := 0; i < len(filter.KnownLanguageIds); i++ {
+			knownLanguageIdStrings[i] = strconv.FormatUint(filter.KnownLanguageIds[i], 10)
+		}
+		knownLangArrayStr = "ARRAY[" + strings.Join(knownLanguageIdStrings, ",") + "]"
+	} else {
+		knownLangArrayStr = "ARRAY[]::bigint[]"
+	}
+
+	if len(filter.LearnLanguageIds) > 0 {
+		learnLanguageIdStrings := make([]string, len(filter.LearnLanguageIds))
+		for i := 0; i < len(filter.LearnLanguageIds); i++ {
+			learnLanguageIdStrings[i] = strconv.FormatUint(filter.LearnLanguageIds[i], 10)
+		}
+		learnLangArrayStr = "ARRAY[" + strings.Join(learnLanguageIdStrings, ",") + "]"
+	} else {
+		learnLangArrayStr = "ARRAY[]::bigint[]"
+	}
+
 	query := fmt.Sprintf(`
 		SELECT * FROM (
-			SELECT 
+			SELECT
 				u.user_id,
 				u.username,
 				u.description,
@@ -106,76 +140,101 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 				similarity(u.username, '%v') AS sml1,
 				similarity(u.nickname, '%v') AS sml2,
 				similarity(u.description, '%v') AS sml3,
-				COALESCE(h.hobby_titles, '{}') AS hobby_titles,
-				COALESCE(kl.known_language_names, '{}') AS known_language_names,
-				COALESCE(ll.learn_language_names, '{}') AS learn_language_names
+				COALESCE(h.hobby_ids, '{}') AS hobby_ids,
+				COALESCE(kl.known_language_ids, '{}') AS known_language_ids,
+				COALESCE(ll.learn_language_ids, '{}') AS learn_language_ids,
+				-- Count matching hobbies
+				(
+					SELECT COUNT(*) 
+					FROM unnest(COALESCE(h.hobby_ids, '{}')) AS user_hobby_id
+					WHERE user_hobby_id = ANY(%s)
+				) AS matched_hobbies_count,
+				-- Count matching known languages
+				(
+					SELECT COUNT(*) 
+					FROM unnest(COALESCE(kl.known_language_ids, '{}')) AS user_known_lang_id
+					WHERE user_known_lang_id = ANY(%s)
+				) AS matched_known_languages_count,
+				-- Count matching learn languages
+				(
+					SELECT COUNT(*) 
+					FROM unnest(COALESCE(ll.learn_language_ids, '{}')) AS user_learn_lang_id
+					WHERE user_learn_lang_id = ANY(%s)
+				) AS matched_learn_languages_count
 			FROM users u
 			LEFT JOIN LATERAL (
-					SELECT array_agg(h.title) AS hobby_titles
-					FROM user_hobbies uh
-					JOIN hobbies h ON h.hobby_id = uh.hobby_id
-					WHERE uh.user_id = u.user_id
+				SELECT array_agg(h.hobby_id) AS hobby_ids
+				FROM user_hobbies uh
+				JOIN hobbies h ON h.hobby_id = uh.hobby_id
+				WHERE uh.user_id = u.user_id
 			) h ON true
 			LEFT JOIN LATERAL (
-					SELECT array_agg(l.name) AS known_language_names
-					FROM user_languages ul
-					JOIN languages l ON l.language_id = ul.language_id
-					WHERE ul.user_id = u.user_id AND ul.is_known = true
+				SELECT array_agg(l.language_id) AS known_language_ids
+				FROM user_languages ul
+				JOIN languages l ON l.language_id = ul.language_id
+				WHERE ul.user_id = u.user_id AND ul.is_known = true
 			) kl ON true
 			LEFT JOIN LATERAL (
-					SELECT array_agg(l.name) AS learn_language_names
-					FROM user_languages ul
-					JOIN languages l ON l.language_id = ul.language_id
-					WHERE ul.user_id = u.user_id AND ul.is_known = false
+				SELECT array_agg(l.language_id) AS learn_language_ids
+				FROM user_languages ul
+				JOIN languages l ON l.language_id = ul.language_id
+				WHERE ul.user_id = u.user_id AND ul.is_known = false
 			) ll ON true
 			WHERE true
-	`, filter.SearchString, filter.SearchString, filter.SearchString)
+	`, 
+	filter.SearchString, filter.SearchString, filter.SearchString,
+	hobbyArrayStr, knownLangArrayStr, learnLangArrayStr)
 
+	// Add WHERE conditions
 	if len(filter.HobbieIds) > 0 {
 		query += fmt.Sprintf(`
-				AND EXISTS (
-								SELECT 1
-								FROM user_hobbies ul2
-								JOIN hobbies l2 ON l2.hobby_id = ul2.hobby_id
-								WHERE ul2.user_id = u.user_id 
-												AND l2.hobby_id IN (%v)
-				)
-		`, strings.Join(filter.HobbieIds, ", "))
+			AND EXISTS (
+				SELECT 1
+				FROM user_hobbies uh2
+				JOIN hobbies h2 ON h2.hobby_id = uh2.hobby_id
+				WHERE uh2.user_id = u.user_id
+				AND h2.hobby_id = ANY(%s)
+			)
+		`, hobbyArrayStr)
 	}
 	if len(filter.KnownLanguageIds) > 0 {
 		query += fmt.Sprintf(`
-				AND EXISTS (
-					SELECT 1
-					FROM user_languages ul2
-					JOIN languages l2 ON l2.language_id = ul2.language_id
-					WHERE ul2.user_id = u.user_id 
-						AND ul2.is_known = true 
-						AND l2.language_id IN (%v)
-				)
-		`, strings.Join(filter.KnownLanguageIds, ", "))
+			AND EXISTS (
+				SELECT 1
+				FROM user_languages ul2
+				JOIN languages l2 ON l2.language_id = ul2.language_id
+				WHERE ul2.user_id = u.user_id
+				AND ul2.is_known = true
+				AND l2.language_id = ANY(%s)
+			)
+		`, knownLangArrayStr)
 	}
-	if len(filter.KnownLanguageIds) > 0 {
+	if len(filter.LearnLanguageIds) > 0 {
 		query += fmt.Sprintf(`
-				AND EXISTS (
-					SELECT 1
-					FROM user_languages ul2
-					JOIN languages l2 ON l2.language_id = ul2.language_id
-					WHERE ul2.user_id = u.user_id 
-						AND ul2.is_known = false
-						AND l2.language_id IN (%v)
-				)
-		`, strings.Join(filter.LearnLanguageIds, ", "))
+			AND EXISTS (
+				SELECT 1
+				FROM user_languages ul2
+				JOIN languages l2 ON l2.language_id = ul2.language_id
+				WHERE ul2.user_id = u.user_id
+				AND ul2.is_known = false
+				AND l2.language_id = ANY(%s)
+			)
+		`, learnLangArrayStr)
 	}
 
 	if filter.UserId != 0 {
 		query += fmt.Sprintf(`
-				AND u.user_id = %v
+			AND u.user_id = %v
 		`, filter.UserId)
 	}
 
+	// Add ORDER BY with sum of matching counts
 	query += fmt.Sprintf(`
 		)
-		ORDER BY 2*sml1+COALESCE(sml2,0)+COALESCE(sml3,0) DESC, user_id ASC
+		ORDER BY 
+			(matched_hobbies_count + matched_known_languages_count + matched_learn_languages_count) DESC,
+			2*sml1 + COALESCE(sml2,0) + COALESCE(sml3,0) DESC, 
+			user_id ASC
 		OFFSET %v*%v
 		LIMIT %v
 	`, max(filter.PageNumber, uint64(1))-1, filter.PageSize, max(filter.PageSize, uint64(1)))

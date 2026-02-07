@@ -236,10 +236,10 @@ type updateUserRequest struct {
 	Password    string `json:"password"`
 	Nickname    string `json:"nickname"`
 	Color       string `json:"color"`
-	AddHobbyIds []database.UserHobby `json:"add_hobby_ids"`
-	DeleteHobbyIds []database.UserHobby `json:"delete_hobby_ids"`
-	AddLanguageIds []database.UserLanguage `json:"add_language_ids"`
-	DeleteLanguageIds []database.UserLanguage `json:"delete_language_ids"`
+	AddHobbyIds []database.UserHobby `json:"add_hobbies"`
+	DeleteHobbyIds []database.UserHobby `json:"delete_hobbies"`
+	AddLanguageIds []database.UserLanguage `json:"add_languages"`
+	DeleteLanguageIds []database.UserLanguage `json:"delete_languages"`
 }
 
 func updateUser(c *echo.Context) error {

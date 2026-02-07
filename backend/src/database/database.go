@@ -3,13 +3,15 @@ package database
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"github.com/lib/pq"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var DBC *DBController
@@ -19,8 +21,8 @@ const RefreshTokenLength = 256
 type User struct {
 	UserId       uint64 `gorm:"primaryKey"`
 	Username     string
-    Nickname     string
-    Color        string
+	Nickname     string
+	Color        string
 	PasswordHash []byte `gorm:"type:bytea"`
 	RefreshToken string
 	Description  string // Bio
@@ -82,8 +84,8 @@ type UserFilter struct {
 type Users []struct {
 	UserId             uint64         `json:"user_id"`
 	Username           string         `json:"username"`
-    Nickname           string         `json:"nickname"`
-    Color              string         `json:"color"`
+	Nickname           string         `json:"nickname"`
+	Color              string         `json:"color"`
 	Description        string         `json:"description"`
 	HobbyTitles        pq.StringArray `json:"hobby_titles" gorm:"type:text[]"`
 	KnownLanguageNames pq.StringArray `json:"known_language_names" gorm:"type:text[]"`
@@ -99,8 +101,8 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 				u.user_id,
 				u.username,
 				u.description,
-                u.nickname,
-                u.color,
+				u.nickname,
+				u.color,
 				similarity(u.username, '%v') AS sml1,
 				similarity(u.nickname, '%v') AS sml2,
 				similarity(u.description, '%v') AS sml3,
@@ -131,13 +133,13 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 
 	if len(filter.HobbieIds) > 0 {
 		query += fmt.Sprintf(`
-                AND EXISTS (
-                        SELECT 1
-                        FROM user_hobbies ul2
-                        JOIN hobbies l2 ON l2.hobby_id = ul2.hobby_id
-                        WHERE ul2.user_id = u.user_id 
-                                AND l2.hobby_id IN (%v)
-                )
+				AND EXISTS (
+								SELECT 1
+								FROM user_hobbies ul2
+								JOIN hobbies l2 ON l2.hobby_id = ul2.hobby_id
+								WHERE ul2.user_id = u.user_id 
+												AND l2.hobby_id IN (%v)
+				)
 		`, strings.Join(filter.HobbieIds, ", "))
 	}
 	if len(filter.KnownLanguageIds) > 0 {
@@ -184,44 +186,70 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 	return result, err
 }
 
-func (dbc *DBController) UpdadateUser(user *User) error {
+func (dbc *DBController) UpdadateUser(user *User, newLanguageIds []UserLanguage, oldLanguageIds []UserLanguage, newHobbyIds []UserHobby, oldHobbyIds []UserHobby) error {
 	query := "UPDATE users "
 	var args []any
-	
-    query += "SET user_id = ?"
-    args = append(args, user.UserId)
+	var updateStrings []string
 
 	if len(user.PasswordHash) != 0 {
-		query += ", password_hash = ? "
+		updateStrings = append(updateStrings, "password_hash = ?")
 		args = append(args, user.PasswordHash)
-		if user.Description != "" {
-			query += ", "
-		}
 	}
 
 	if user.Description != "" {
-		query += ", description = ? "
+		updateStrings = append(updateStrings, "description = ?")
 		args = append(args, user.Description)
 	}
 
 	if user.Nickname != "" {
-		query += ", nickname = ? "
+		updateStrings = append(updateStrings, "nickname = ?")
 		args = append(args, user.Nickname)
 	}
 
 	if user.Color != "" {
-		query += ", color = ? "
+		updateStrings = append(updateStrings, "color = ?")
 		args = append(args, user.Color)
 	}
 
-	query += "WHERE user_id = ?"
-	args = append(args, user.UserId)
-    fmt.Println(query, args)
-	return dbc.db.Exec(query, args...).Error
+	var err error
+	
+	if len(updateStrings) > 0 {
+		query += "SET "
+
+		query += strings.Join(updateStrings, ", ")
+
+		query += " WHERE user_id = ?"
+		args = append(args, user.UserId)
+		fmt.Println(query, args)
+
+		err = dbc.db.Exec(query, args...).Error
+	}
+
+	for _, language := range newLanguageIds {
+		language.UserId = user.UserId
+		err = errors.Join(err, dbc.AddLanguage(&language))
+	}
+	
+	for _, language := range oldLanguageIds {
+		language.UserId = user.UserId
+		err = errors.Join(err, dbc.DeleteLanguage(&language))
+	}
+	
+	for _, hobby := range newHobbyIds {
+		hobby.UserId = user.UserId
+		err = errors.Join(err, dbc.AddHobby(&hobby))
+	}
+	
+	for _, hobby := range oldHobbyIds {
+		hobby.UserId = user.UserId
+		err = errors.Join(err, dbc.DeleteHobby(&hobby))
+	}
+
+	return err
 }
 
-func (dbc *DBController) DeleteLanguage(userId, languageId uint64) error {
-	return dbc.db.Exec("DELETE FROM user_languages WHERE user_id = ? AND language_id = ?", userId, languageId).Error
+func (dbc *DBController) DeleteLanguage(language *UserLanguage) error {
+	return dbc.db.Exec("DELETE FROM user_languages WHERE user_id = ? AND language_id = ?", language.UserId, language.LanguageId).Error
 }
 
 type Language struct {
@@ -250,8 +278,8 @@ func (dbc *DBController) AddLanguage(language *UserLanguage) error {
 	).Error
 }
 
-func (dbc *DBController) DeleteHobby(userId, hobbyId uint64) error {
-	return dbc.db.Exec("DELETE FROM user_hobbies WHERE user_id = ? AND hobby_id = ?", userId, hobbyId).Error
+func (dbc *DBController) DeleteHobby(hobby *UserHobby) error {
+	return dbc.db.Exec("DELETE FROM user_hobbies WHERE user_id = ? AND hobby_id = ?", hobby.UserId, hobby.HobbyId).Error
 }
 
 type Hobby struct {
@@ -272,7 +300,7 @@ type UserHobby struct {
 
 func (dbc *DBController) AddHobby(hobby *UserHobby) error {
 	return dbc.db.Exec(
-		"INSERT INTO user_languages (user_id, hobby_id) VALUES (?, ?, ?)",
+		"INSERT INTO user_hobbies (user_id, hobby_id) VALUES (?, ?)",
 		hobby.UserId,
 		hobby.HobbyId,
 	).Error
@@ -344,9 +372,10 @@ func (dbc *DBController) DeleteMessage(messageId uint64) error {
 }
 
 type Chat struct {
-	ChatId uint64
-	Title  string
-	Type   string
+	ChatId uint64 `json:"chat_id"`
+	Title  string `json:"title"`
+	Type   string `json:"type"`
+	MemberIds pq.Int64Array `json:"member_ids" gorm:"type:serial[]"`
 }
 
 func (dbc *DBController) CreateChat(chat *Chat) error {
@@ -364,7 +393,22 @@ func (dbc *DBController) JoinChat(chatId, userId uint64) error {
 func (dbc *DBController) MyChats(userId uint64) ([]Chat, error) {
 	var chats []Chat
 	err := dbc.db.Raw(`
-		SELECT chats.chat_id, chats.title, chats.type FROM chat_members JOIN chats ON chat_members.chat_id = chats.chat_id WHERE chat_members.user_id = ?;
+		WITH user_chats AS (
+			SELECT DISTINCT chat_id
+			FROM chat_members
+			WHERE user_id = ?
+		)
+		SELECT
+			c.chat_id,
+			c.title,
+			c.type,
+			(
+				SELECT array_agg(user_id)
+				FROM chat_members cm
+				WHERE cm.chat_id = c.chat_id
+			) as member_ids
+		FROM user_chats uc
+		JOIN chats c ON uc.chat_id = c.chat_id;
 	`, userId).Find(&chats).Error
 	return chats, err
 }
@@ -375,6 +419,24 @@ func (dbc *DBController) GetChatMembers(chatId uint64) ([]uint64, error) {
 		SELECT user_id FROM chat_members WHERE chat_id = ?
 	`, chatId).Find(&members).Error
 	return members, err
+}
+
+func (dbc *DBController) GetChat(chatId uint64) (*Chat, error) {
+	var chat *Chat
+	err := dbc.db.Raw(`
+		SELECT
+			c.chat_id,
+			c.title,
+			c.type,
+			(
+				SELECT array_agg(user_id)
+				FROM chat_members cm
+				WHERE cm.chat_id = c.chat_id
+			) as member_ids
+		FROM chats c
+		WHERE ? = c.chat_id;
+	`, chatId).Find(&chat).Error
+	return chat, err
 }
 
 func (dbc *DBController) LeaveChat(chatId, userId uint64) error {

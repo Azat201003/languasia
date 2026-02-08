@@ -16,29 +16,49 @@ import (
 	"github.com/Azat201003/languasia/backend/src/websocket"
 )
 
+func tokenByString(tokenString string) (uint64, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		publicKey, err := os.ReadFile("public_key.pem")
+		if err != nil {
+			return nil, err
+		}
+		return jwt.ParseEdPublicKeyFromPEM(publicKey)
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
+
+	if err != nil {
+		return 0,  err
+	}
+	userIdString, err := token.Claims.GetIssuer()
+
+	if err != nil {
+		return 0, err
+	}
+	
+	userId, err := strconv.ParseUint(userIdString, 10, 64)
+
+	if err != nil {
+		return 0, err
+	}
+	return userId, nil
+}
+
 func authMiddlware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c *echo.Context) (err error) {
 		tokenString := strings.TrimPrefix(c.Request().Header.Get("Authorization"), "Bearer ")
 
 		fmt.Println(c.Request().Header.Get("Authorization"), tokenString)
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-			publicKey, err := os.ReadFile("public_key.pem")
-			if err != nil {
-				return nil, err
-			}
-			return jwt.ParseEdPublicKeyFromPEM(publicKey)
-		}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
-
+		userId, err := tokenByString(tokenString)
 		if err == nil {
-			userIdString, err := token.Claims.GetIssuer()
-
+			c.Set("user_id", userId)
+		} else {
+			tokenString := c.QueryParam("access_token")
+			fmt.Println(tokenString)
+			userId, err := tokenByString(tokenString)
 			if err == nil {
-				userId, err := strconv.ParseUint(userIdString, 10, 64)
-
-				if err == nil {
-					c.Set("user_id", userId)
-				}
+				c.Set("user_id", userId)
+			} else {
+				fmt.Println(err)
 			}
 		}
 

@@ -34,8 +34,19 @@ services:
       - languasia-network
     restart: unless-stopped
 
+  swagger-ui:
+    image: docker.swagger.io/swaggerapi/swagger-ui
+    container_name: languasia-swagger-ui
+    volumes:
+      - ./backend/openapi.yml:/openapi.yaml
+    environment:
+      SWAGGER_JSON: /openapi.yaml
+    networks:
+      - languasia-network
+
   proxy:
     image: nginx:alpine
+    container_name: languasia-proxy
     ports:
       - "443:443"
       - "80:80"

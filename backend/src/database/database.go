@@ -437,10 +437,11 @@ type Chat struct {
 	MemberIds pq.Int64Array `json:"member_ids" gorm:"type:serial[]"`
 }
 
-func (dbc *DBController) CreateChat(chat *Chat) error {
-	return dbc.db.Exec(`
-		INSERT INTO chats (chat_id, title) VALUES (?, ?)
-	`, chat.ChatId, chat.Title).Error
+func (dbc *DBController) CreateChat(chat *Chat) (chatId uint64, err error) {
+	err = dbc.db.Raw(`
+		INSERT INTO chats (title) VALUES (?) RETURNING chat_id
+	`, chat.Title).Scan(&chatId).Error
+	return
 }
 
 func (dbc *DBController) JoinChat(chatId, userId uint64) error {

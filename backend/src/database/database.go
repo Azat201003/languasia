@@ -67,7 +67,7 @@ func (dbc *DBController) LoginUser(user *User) error {
 
 func (dbc *DBController) UserByRefreshToken(user *User) error {
 	return dbc.db.Raw(
-		"SELECT * FRM users where refresh_token = ?",
+		"SELECT * FROM users where refresh_token = ?",
 		user.RefreshToken,
 	).First(user).Error
 }

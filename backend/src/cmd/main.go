@@ -73,7 +73,7 @@ func main() {
 	e.POST("/register", register)
 	e.POST("/login", login)
 	e.POST("/refresh", refresh)
-	e.GET("/users", recieveFilteredUsers)
+	e.POST("/users", recieveFilteredUsers)
 	//e.GET("/users/:user_id", getUser)
 	e.DELETE("/users/:user_id", deleteUser)
 	e.PATCH("/users/:user_id", updateUser)

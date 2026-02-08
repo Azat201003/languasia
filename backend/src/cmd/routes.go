@@ -433,12 +433,75 @@ func getChat(c *echo.Context) error {
 
 	var memberIds []int64
 	memberIds = []int64(chat.MemberIds)
-	//	return c.String(http.StatusInternalServerError, fmt.Sprintf("Cannot scan memberIds: %v", err))
-	//}
 	if !slices.Contains(memberIds, int64(userId)) {
 		return c.String(http.StatusForbidden, "User is not member of this chat")
 	}
 
 	return c.JSON(http.StatusOK, chat)
+}
+
+func createChat(c *echo.Context) error {
+	request := new(database.Chat)
+	if err := c.Bind(request); err != nil {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse chat: %v", err.Error()))
+		return err
+	}
+
+	userId, ok := c.Get("user_id").(uint64)
+	if !ok {
+		return c.String(http.StatusBadRequest, "user id in autharization token not found")
+	}
+
+	chatId, err := database.DBC.CreateChat(request)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "Cannot create chat")
+	}
+
+	err = database.DBC.JoinChat(chatId, userId)
+
+	if err != nil {
+		return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add you to chat :(. (btw chat created and it is just trash)")
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"chat_id": chatId,
+	})
+}
+
+func addMember(c *echo.Context) error {	
+	myUserId, ok := c.Get("user_id").(uint64)
+	if myUserId == uint64(0) || myUserId == 0 || !ok {
+		return c.String(http.StatusUnauthorized, "my user id = 0")
+	}
+
+	userId, err := strconv.ParseUint(c.ParamOr("user_id", "0"), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	chatId, err := strconv.ParseUint(c.ParamOr("chat_id", "0"), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	chat, err := database.DBC.GetChat(chatId)
+	if err != nil {
+		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot get members: %v", err.Error()))
+	}
+
+	var memberIds []int64
+	memberIds = []int64(chat.MemberIds)
+	if !slices.Contains(memberIds, int64(myUserId)) {
+		return c.String(http.StatusForbidden, "User is not member of this chat")
+	}
+	
+	err = database.DBC.JoinChat(chatId, userId)
+
+	if err != nil {
+		return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add user to chat :(.")
+	}
+	
+
+	return c.NoContent(http.StatusOK)
 }
 

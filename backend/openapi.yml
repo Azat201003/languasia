@@ -6,8 +6,8 @@ info:
   contact:
     name: Azat201003
 servers:
-  - url: http://localhost:8080
-    description: Local development server
+  - url: https://95.165.132.221/api/
+    description: Main server
 
 components:
   securitySchemes:

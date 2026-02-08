@@ -81,6 +81,8 @@ func main() {
 	e.DELETE("/users/:user_id/languages/:language_id", deleteLanguage)
 	e.POST("/users/:user_id/hobbies", addHobby)
 	e.DELETE("/users/:user_id/hobbies/:hobby_id", deleteHobby)
+	e.POST("/chats", createChat)
+	e.POST("/chats/:chat_id/members/:user_id", addMember)
 	e.GET("/languages", getListLanguages)
 	e.GET("/hobbies", getListHobbies)
 

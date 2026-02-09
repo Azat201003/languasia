@@ -59,6 +59,8 @@ paths:
                     type: string
                   jwt_token:
                     type: string
+                  user_id:
+                    type: integer
         '401':
           description: Invalid credentials
         '422':

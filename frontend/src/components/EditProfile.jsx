@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './EditProfile.css';
 import Logo from '../assets/Logo.svg';
 import Settings from '../assets/settings.svg';
+import Header from './Header'
 
 const EditProfile = ({
   initialName = '',
@@ -73,11 +74,8 @@ const EditProfile = ({
 
   return (
     <>
-    <header className="top-header">
-      <img src={Logo} alt="Logo" className="logo" />
-      <button className="profile-btn" aria-label="Профиль" />
-    </header>
-    <div className="profile-background">
+      <Header />
+      <div className="profile-background">
       <div className="profile-card">
 
 

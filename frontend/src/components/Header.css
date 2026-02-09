@@ -1,0 +1,38 @@
+
+.top-header {
+  height: 10vh;
+  background-color: #181818;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.logo {
+  height: 42px;
+  width: auto;
+  font-size: 28px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.profile-btn {
+  width: 42px;
+  height: 42px;
+  background-color: #2f2f2f;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background-color: url('https://via.placeholder.com/42');
+  background-size: cover;
+  background-position: center;
+  transition: box-shadow 0.2s;
+}
+
+.profile-btn:hover {
+  box-shadow: 0 0 0 2px #40B26E;
+}
+

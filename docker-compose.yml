@@ -1,18 +1,35 @@
 services:
+  frontend:
+    build: frontend
+    container_name: languasia-front
+    depends_on:
+      - app
+    expose:
+      - 1234
+    networks:
+      - languasia-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+      start_period: 15s
+
   app:
     build: backend/
     container_name: languasia-app
     expose: 
-      - "8080"
+      - 8080
     environment:
-      DB_HOST: "database"
+      DB_HOST: database
     networks:
       - languasia-network
     depends_on:
       - database
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -22,17 +39,23 @@ services:
     image: postgres:16-alpine
     container_name: languasia-db
     environment:
-      POSTGRES_PASSWORD: "1234"
-      POSTGRES_USER: "languasia"
-      POSTGRES_DB: "languasia"
-      POSTGRES_INITDB_ARGS: "--data-checksums"
-      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_USER: languasia
+      POSTGRES_DB: languasia
+      POSTGRES_INITDB_ARGS: --data-checksums
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     volumes:
       - ./backend/migrations:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data
     networks:
       - languasia-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "languasia"]
+      interval: 30s
+      timeout: 5s
+      retries: 2
+      start_period: 15s
 
   swagger-ui:
     image: docker.swagger.io/swaggerapi/swagger-ui
@@ -48,15 +71,23 @@ services:
     image: nginx:alpine
     container_name: languasia-proxy
     ports:
-      - "443:443"
-      - "80:80"
+      - 443:443
+      - 80:80
     depends_on:
       - app
+      - frontend
+      - swagger-ui
     volumes:
       - ./nginx:/etc/nginx:ro
     restart: always
     networks:
       - languasia-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 networks:
   languasia-network:

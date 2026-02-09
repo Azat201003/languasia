@@ -1,10 +1,13 @@
 import React, { useState, useContext } from 'react';
 import './AuthPage.css';
+import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { authContext } from "../contexts/AuthContext.jsx";
 import api from "../api.jsx";
+import Header from './Header'
 
 const AuthPage = () => {
+  const navigate = useNavigate();
   
   const api_url = "https://95.165.132.221/api";
   
@@ -124,27 +127,9 @@ const AuthPage = () => {
     
     const data = await loginResponse.json();
 
-    const getIdData = {
-      search_string: registerData.login
-    };
-
-    const getUserId = await fetch('https://95.165.132.221/api/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        getIdData
-      ),
-    });
-
-    const userId = (await getUserId.json())[0].user_id
-
-    console.log(userId)
-    
     localStorage.setItem('token', data.jwt_token);
-    localStorage.setItem('user_id', userId);
-
+    localStorage.setItem('user_id', data.user_id);
+    navigate('/');
   };
 
   return (
@@ -168,12 +153,12 @@ const AuthPage = () => {
             Register
           </button>
 
-	  <div 
-    	    className="glider"
-    	      style={{
-      	        transform: isLogin ? 'translateX(0%)' : 'translateX(105.5%)'
-    	    }}
-  	  />
+      <div 
+            className="glider"
+              style={{
+                transform: isLogin ? 'translateX(0%)' : 'translateX(105.5%)'
+            }}
+      />
         </div>
 
         <div className="auth-content">

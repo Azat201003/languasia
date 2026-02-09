@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, BrowserRouter, Route, Navigate, Outlet } from 'react-router-dom';
 import {AuthPage} from './components/AuthPage';
 import {EditProfile} from './components/EditProfile';
-import {Messenger} from './components/Messenger';
+import Messenger from './components/Messenger';
 
 
 function ProtectedRoute() {
@@ -23,17 +23,17 @@ function App() {
           <Route path="/auth" element={< AuthPage/>} />
           <Route element={<ProtectedRoute />}>
           <Route path="/" element={< Messenger />} />
-<Route path="/my" element={<EditProfile
-  initialDescription={""}
-  initialHobbyTitles={["hdbvfl"]}
-  initialKnownLanguageNames={["English"]}
-  initialLearnLanguageNames={["English"]}
-  onSave={(data) => {
-    updateUser(data);
-    navigate('/profile');
-  }}
-  onCancel={() => navigate(-1)}
-/>} />
+            <Route path="/my" element={<EditProfile
+              initialDescription={""}
+              initialHobbyTitles={["hdbvfl"]}
+              initialKnownLanguageNames={["English"]}
+              initialLearnLanguageNames={["English"]}
+              onSave={(data) => {
+                updateUser(data);
+                navigate('/profile');
+              }}
+              onCancel={() => navigate(-1)}
+            />} />
         </Route>
         </Routes>
     </BrowserRouter>

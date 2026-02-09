@@ -102,6 +102,7 @@ func login(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]any{
 		"refresh_token": user.RefreshToken,
 		"jwt_token":     jwt_token_string,
+        "user_id":       user.UserId,
 	})
 }
 

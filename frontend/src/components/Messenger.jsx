@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './Messenger.css';
 import Logo from '../assets/Logo.svg';
 import sendSymbol from '../assets/sendSymbol.svg';
+import Header from './Header'
 
 const Messenger = () => {
 
@@ -20,11 +21,7 @@ const Messenger = () => {
   return (
   <>
     {/* Верхняя панель */}
-    <header className="top-header">
-      <img src={Logo} alt="Logo" className="logo" />
-      <button className="profile-btn" aria-label="Профиль" />
-    </header>
-
+    <Header />
     {/* Основной контент */}
     <div className="main-content">
       {/* Левая панель: список чатов */}
@@ -126,4 +123,4 @@ const Messenger = () => {
 );
 };
 
-export {Messenger};
+export default Messenger;

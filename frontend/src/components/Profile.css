@@ -1,0 +1,217 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.profile-background {
+  min-height: 10%;
+  background-color: #0d0d0df0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: #e0e0e0;
+}
+
+.profile-card {
+  width: 80%;
+  background-color: #181818;
+  border-radius: 12px;
+  border: 1px solid #333;
+  overflow: hidden;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  margin-top: 5%;
+  margin-bottom: 5%;
+}
+
+.profile-header {
+  text-align: center;
+  padding: 40px 40px 30px;
+  background-color: #181818;
+}
+
+.logo {
+  height: 48px;
+  width: auto;
+  margin-bottom: 16px;
+}
+
+.profile-header h1 {
+  font-size: 26px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.profile-content {
+  padding: 0 40px 40px;
+}
+
+.description {
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  white-space: pre-wrap;
+  color: #e0e0e0;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 16px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chip {
+  background-color: #40B26E;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Разный цвет для языков, которые изучаются (чтобы визуально отличать от известных) */
+.chip.learn {
+  background-color: #6a52d5;
+}
+
+/* Если нет элементов — можно добавить серый текст через HTML/JS */
+.empty-message {
+  color: #666;
+  font-size: 15px;
+  font-style: italic;
+}
+
+.profile-footer {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.edit-btn {
+  display: inline-block;
+  width: 100%;
+  padding: 14px;
+  background-color: #40B26E;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.edit-btn:hover {
+  background-color: #6a52d5;
+}
+
+.link {
+  color: #40B26E;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+
+.description-textarea {
+  width: 100%;
+  padding: 14px 20px;
+  background-color: #2f2f2f;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 16px;
+}
+
+.description-textarea::placeholder {
+  color: #666;
+}
+
+.description-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px #40b26e94;
+}
+
+.chip-input-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chip-input {
+  flex: 1;
+  padding: 14px 20px;
+  background-color: #2f2f2f;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 15px;
+}
+
+.chip-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px #40b26e94;
+}
+
+.chip-add-btn {
+  padding: 0 20px;
+  background-color: #40B26E;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chip-add-btn:hover {
+  background-color: #6a52d5;
+}
+
+.chip {
+  position: relative;
+  padding: 10px 32px 10px 20px; /* место под крестик */
+}
+
+.chip-close {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.chip-close:hover {
+  opacity: 1;
+}
+
+.cancel-btn {
+  background-color: #333;
+}
+
+.cancel-btn:hover {
+  background-color: #444;
+}

@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, BrowserRouter, Route, Navigate, Outlet } from 'react-router-dom';
 import {AuthPage} from './components/AuthPage';
 import {EditProfile} from './components/EditProfile';
+import {SearchPeople} from './components/SearchPeople';
 import Messenger from './components/Messenger';
 
 
@@ -22,7 +23,7 @@ function App() {
         <Routes>
           <Route path="/auth" element={< AuthPage/>} />
           <Route element={<ProtectedRoute />}>
-          <Route path="/" element={< Messenger />} />
+p         <Route path="/" element={< Messenger />} />
             <Route path="/my" element={<EditProfile
               initialDescription={""}
               initialHobbyTitles={["hdbvfl"]}
@@ -34,6 +35,7 @@ function App() {
               }}
               onCancel={() => navigate(-1)}
             />} />
+            <Route path="/search" element={<SearchPeople/>} />
         </Route>
         </Routes>
     </BrowserRouter>

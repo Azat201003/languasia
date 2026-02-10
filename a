@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Поиск партнеров</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html {
+      height: 100%;
+    }
+    body {
+      height: 100vh;
+      min-height: 100%;
+      background-color: #0d0d0df0;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      color: #e0e0e0;
+    }
+    /* Верхняя панель */
+    .top-header {
+      height: 10vh;
+      background-color: #181818;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .profile-btn {
+      width: 42px;
+      height: 42px;
+      background-color: #2f2f2f;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      background-image: url('https://via.placeholder.com/42');
+      background-size: cover;
+      background-position: center;
+      transition: box-shadow 0.2s;
+    }
+    .profile-btn:hover {
+      box-shadow: 0 0 0 2px #40B26E;
+    }
+    /* Основной контент */
+    .main-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    /* Левая панель — форма поиска */
+    .search-sidebar {
+      width: 420px;
+      background-color: #181818;
+      border-right: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      flex-shrink: 0;
+    }
+    .search-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .search-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .search-label {
+      font-size: 14px;
+      color: #b0b0b0;
+      font-weight: 500;
+    }
+    .search-input {
+      padding: 14px 20px;
+      background-color: #2f2f2f;
+      border: none;
+      border-radius: 9999px;
+      color: #e0e0e0;
+      font-size: 15px;
+    }
+    .search-input::placeholder {
+      color: #666;
+    }
+    .search-input:focus {
+      outline: none;
+      box-shadow: 0 0 0 1px #40b26e94;
+    }
+    .search-button {
+      margin-top: 10px;
+      background-color: #40B26E;
+      color: #ffffff;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 9999px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .search-button:hover {
+      background-color: #359056;
+    }
+    /* Правая панель — список результатов */
+    .results-area {
+      flex: 1;
+      background-color: #111111;
+      display: flex;
+      flex-direction: column;
+    }
+    .results-header {
+      height: 9vh;
+      background-color: #181818;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      flex-shrink: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .results-list {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .chat-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 20px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      border-bottom: 1px solid #222;
+    }
+    .chat-item:hover {
+      background-color: #2c2c2c;
+    }
+    .chat-item.active {
+      background-color: #40B26E20;
+      border-left: 3px solid #40B26E;
+    }
+    .chat-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background-color: #333;
+      background-size: cover;
+      background-position: center;
+      margin-right: 18px;
+      flex-shrink: 0;
+    }
+    .chat-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .chat-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+    .chat-preview {
+      font-size: 13.5px;
+      color: #b0b0b0;
+      line-height: 1.4;
+    }
+    .chat-status {
+      font-size: 12px;
+      color: #666;
+      margin-left: 12px;
+    }
+    .no-results {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-header">
+    <div class="logo">Найти партнера</div>
+    <button class="profile-btn"></button>
+  </div>
+
+  <div class="main-content">
+    <!-- Левая панель: форма поиска -->
+    <div class="search-sidebar">
+      <div class="search-form">
+        <div class="search-field">
+          <label class="search-label">Поисковая строка</label>
+          <input type="text" class="search-input" placeholder="Имя, ник, ключевые слова">
+        </div>
+        <div class="search-field">
+          <label class="search-label">Хобби</label>
+          <input type="text" class="search-input" placeholder="Через запятую: чтение, йога, путешествия">
+        </div>
+        <div class="search-field">
+          <label class="search-label">Известные языки</label>
+          <input type="text" class="search-input" list="language-list" placeholder="Через запятую: русский, английский">
+        </div>
+        <div class="search-field">
+          <label class="search-label">Изучаемые языки</label>
+          <input type="text" class="search-input" list="language-list" placeholder="Через запятую: испанский, немецкий">
+        </div>
+        <button class="search-button">Искать</button>
+      </div>
+
+      <!-- Список языков для автодополнения (datalist) -->
+      <datalist id="language-list">
+        <option value="Русский">
+        <option value="Английский">
+        <option value="Испанский">
+        <option value="Китайский">
+        <option value="Хинди">
+        <option value="Арабский">
+        <option value="Португальский">
+        <option value="Бенгальский">
+        <option value="Французский">
+        <option value="Немецкий">
+        <option value="Японский">
+        <option value="Корейский">
+        <option value="Итальянский">
+        <option value="Турецкий">
+        <option value="Польский">
+        <option value="Нидерландский">
+        <option value="Украинский">
+        <option value="Вьетнамский">
+        <option value="Тамильский">
+        <option value="Телугу">
+        <option value="Маратхи">
+        <option value="Индонезийский">
+        <option value="Урду">
+        <option value="Гуджарати">
+        <option value="Каннада">
+        <option value="Малайский">
+        <option value="Персидский">
+        <option value="Пенджабский">
+        <option value="Румынский">
+        <option value="Чешский">
+        <option value="Шведский">
+        <option value="Греческий">
+        <option value="Венгерский">
+        <option value="Тайский">
+        <option value="Иврит">
+        <option value="Финский">
+        <option value="Норвежский">
+        <option value="Датский">
+        <option value="Словацкий">
+        <option value="Болгарский">
+        <option value="Хорватский">
+        <option value="Сербский">
+        <option value="Литовский">
+        <option value="Латышский">
+        <option value="Эстонский">
+        <option value="Словенский">
+        <option value="Армянский">
+        <option value="Грузинский">
+        <option value="Казахский">
+        <option value="Азербайджанский">
+        <option value="Белорусский">
+      </datalist>
+    </div>
+
+    <!-- Правая панель: список результатов -->
+    <div class="results-area">
+      <div class="results-header">Результаты поиска</div>
+      <div class="results-list">
+        <!-- Примеры людей -->
+        <div class="chat-item active">
+          <div class="chat-avatar" style="background-image: url('https://via.placeholder.com/56/4A90E2')"></div>
+          <div class="chat-info">
+            <div class="chat-name">Анна</div>
+            <div class="chat-preview">Хобби: чтение, йога, путешествия • Знает: русский, английский • Учит: испанский, французский</div>
+          </div>
+          <div class="chat-status">Онлайн</div>
+        </div>
+
+        <div class="chat-item">
+          <div class="chat-avatar" style="background-image: url('https://via.placeholder.com/56/7ED321')"></div>
+          <div class="chat-info">
+            <div class="chat-name">Максим</div>
+            <div class="chat-preview">Хобби: футбол, программирование • Знает: русский, английский, немецкий • Учит: японский</div>
+          </div>
+          <div class="chat-status">2 ч. назад</div>
+        </div>
+
+        <div class="chat-item">
+          <div class="chat-avatar" style="background-image: url('https://via.placeholder.com/56/F5A623')"></div>
+          <div class="chat-info">
+            <div class="chat-name">София</div>
+            <div class="chat-preview">Хобби: рисование, кулинария • Знает: английский, французский • Учит: русский</div>
+          </div>
+          <div class="chat-status">Вчера</div>
+        </div>
+
+        <div class="chat-item">
+          <div class="chat-avatar" style="background-image: url('https://via.placeholder.com/56/D0021B')"></div>
+          <div class="chat-info">
+            <div class="chat-name">Дмитрий</div>
+            <div class="chat-preview">Хобби: музыка, бег • Знает: русский, английский • Учит: итальянский</div>
+          </div>
+          <div class="chat-status">3 дня назад</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

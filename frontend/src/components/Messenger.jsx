@@ -39,8 +39,8 @@ const Messenger = () => {
               className="chat-avatar"
             />
             <div className="chat-info">
-              <div className="chat-name">Алексей Петров</div>
-              <div className="chat-preview">Ок, давай в 19:00</div>
+              <div className="chat-name">Alex K.</div>
+              <div className="chat-preview">Ok, let's on 19:00</div>
             </div>
             <div className="chat-time">14:32</div>
           </div>
@@ -50,8 +50,8 @@ const Messenger = () => {
               className="chat-avatar"
             />
             <div className="chat-info">
-              <div className="chat-name">Команда проекта</div>
-              <div className="chat-preview">Мария: не забудьте про встречу</div>
+              <div className="chat-name">Project team</div>
+              <div className="chat-preview">Mary: don't forget about meating</div>
             </div>
             <div className="chat-time">12:05</div>
           </div>
@@ -61,10 +61,10 @@ const Messenger = () => {
               className="chat-avatar"
             />
             <div className="chat-info">
-              <div className="chat-name">Друзья</div>
-              <div className="chat-preview">Ты: фото с вчерашнего дня</div>
+              <div className="chat-name">Friends</div>
+              <div className="chat-preview">You: Gestern Foto</div>
             </div>
-            <div className="chat-time">Вчера</div>
+            <div className="chat-time">yesterday</div>
           </div>
 
           {/* Дополнительные чаты добавляйте здесь */}
@@ -77,27 +77,27 @@ const Messenger = () => {
           <div
             className="chat-avatar"
           />
-          <div className="chat-name">Алексей Петров</div>
+          <div className="chat-name">Alex K.</div>
         </div>
 
         <div className="messages">
           <div className="message received">
-            Привет! Как дела?
+            Hi! How are you?
             <div className="message-time">14:20</div>
           </div>
 
           <div className="message sent">
-            Нормально, спасибо! А у тебя?
+            Ok, thanks! And you?
             <div className="message-time">14:21</div>
           </div>
 
           <div className="message received">
-            Тоже хорошо. Встретимся сегодня вечером?
+            Ok too. Will we meet tomorrow?
             <div className="message-time">14:25</div>
           </div>
 
           <div className="message sent">
-            Да, давай в 19:00
+            Yeah, let'\''s at 19:00
             <div className="message-time">14:32</div>
           </div>
 
@@ -108,7 +108,7 @@ const Messenger = () => {
           <input
             type="text"
             className="message-input"
-            placeholder="Напишите сообщение..."
+            placeholder="Write message..."
           />
           <button className="send-btn" aria-label="Отправить"  onClick={onWebsocketConnect}>
             <img 

@@ -1,0 +1,188 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html {
+  height: 100%;
+}
+body {
+  height: 100vh;
+  min-height: 100%;
+  background-color: #0d0d0df0;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: #e0e0e0;
+}
+/* Верхняя панель */
+.top-header {
+  height: 10vh;
+  background-color: #181818;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+.logo {
+  font-size: 28px;
+  font-weight: 600;
+  color: #ffffff;
+}
+.profile-btn {
+  width: 42px;
+  height: 42px;
+  background-color: #2f2f2f;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background-image: url('https://via.placeholder.com/42');
+  background-size: cover;
+  background-position: center;
+  transition: box-shadow 0.2s;
+}
+.profile-btn:hover {
+  box-shadow: 0 0 0 2px #40B26E;
+}
+/* Основной контент */
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+/* Левая панель — форма поиска */
+.search-sidebar {
+  width: 420px;
+  background-color: #181818;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  flex-shrink: 0;
+}
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.search-label {
+  font-size: 14px;
+  color: #b0b0b0;
+  font-weight: 500;
+}
+.search-input {
+  padding: 14px 20px;
+  background-color: #2f2f2f;
+  border: none;
+  border-radius: 9999px;
+  color: #e0e0e0;
+  font-size: 15px;
+}
+.search-input::placeholder {
+  color: #666;
+}
+.search-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px #40b26e94;
+}
+.search-button {
+  margin-top: 10px;
+  background-color: #40B26E;
+  color: #ffffff;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.search-button:hover {
+  background-color: #359056;
+}
+/* Правая панель — список результатов */
+.results-area {
+  flex: 1;
+  background-color: #111111;
+  display: flex;
+  flex-direction: column;
+}
+.results-header {
+  height: 9vh;
+  background-color: #181818;
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+.results-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.chat-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #222;
+}
+.chat-item:hover {
+  background-color: #2c2c2c;
+}
+.chat-item.active {
+  background-color: #40B26E20;
+  border-left: 3px solid #40B26E;
+}
+.chat-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #333;
+  background-size: cover;
+  background-position: center;
+  margin-right: 18px;
+  flex-shrink: 0;
+}
+.chat-info {
+  flex: 1;
+  min-width: 0;
+}
+.chat-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+.chat-preview {
+  font-size: 13.5px;
+  color: #b0b0b0;
+  line-height: 1.4;
+}
+.chat-status {
+  font-size: 12px;
+  color: #666;
+  margin-left: 12px;
+}
+.no-results {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 16px;
+  text-align: center;
+  padding: 40px;
+}

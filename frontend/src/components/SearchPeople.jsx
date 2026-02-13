@@ -1,9 +1,64 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SearchPeople.css';
 import api from "../api.jsx";
 import Header from './Header'
 
 const SearchPeople = () => {
+    /*
+  const [users, setUsers] = useState([]);
+  const [languages, setLanguages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchString, setSearchString] = useStat("")
+
+  const updateQuery = () => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(
+          'https://95.165.132.221/api/users'
+        );
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  });
+  useEffect(updateQuery, []);
+  useEffect(() => {
+      try {
+        const response = await fetch(
+          'https://95.165.132.221/api/languages'
+        );
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    
+  }, []);
+
+  if (loading) return <div>Loading todos...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+    */
+
   return (
     <>
       <Header />
@@ -30,7 +85,6 @@ const SearchPeople = () => {
           </div>
 
           <datalist id="language-list">
-            <option value="Русский" />
             <option value="Английский" />
           </datalist>
         </div>

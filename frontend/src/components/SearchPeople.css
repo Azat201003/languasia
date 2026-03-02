@@ -13,7 +13,6 @@ body {
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  color: #e0e0e0;
 }
 /* Верхняя панель */
 .top-header {
@@ -185,4 +184,114 @@ body {
   font-size: 16px;
   text-align: center;
   padding: 40px;
+}
+
+.selection-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /*border: 1px solid #ccc;*/
+  border-radius: 4px;
+  padding: 4px;
+  min-height: 38px;
+  background: rgb(47, 47, 47);
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.tag {
+  background: rgb(64, 178, 110);
+  border-radius: 16px;
+  padding: 4px 8px;
+  font-size: 0.85em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: white;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2em;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.plus-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgb(64, 178, 110);
+  color: white;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plus-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #181818;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-list {
+  margin: 15px 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.modal-item {
+  display: block;
+  padding: 5px 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-actions button {
+  background: #40b26e;
+  color: white;
+  border: none;
+  padding: 5px;
+  border-radius: 5px;
+}
+
+input[type="checkbox"] {
+  accent-color: #40b26e;
 }

@@ -15,6 +15,8 @@ const Header = () => {
       <a href="/">
           <img src={Logo} alt="Logo" className="logo"/>
       </a>
+      <a href="/messanger/">Messenger</a>
+      <a href="/search/">Find users</a>
       <button className="profile-btn" aria-label="Профиль" onClick={onProfile} />
     </header>
   );

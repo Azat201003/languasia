@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { api } from "../api.jsx";
 import './Messenger.css';
 import Logo from '../assets/Logo.svg';
 import sendSymbol from '../assets/sendSymbol.svg';
@@ -8,6 +9,26 @@ const Messenger = () => {
 
   const user_id = localStorage.getItem('user_id');
   const token = localStorage.getItem('token');
+ 
+  const [chats, setChats] = useState([]);
+  
+    useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const chatRes = api.get(`/user/${user_id}/chats`)
+
+        if (chatRes.status === 'fulfilled') {
+          setChats(chatRes.value.data);
+        } else {
+          console.warn('Chatss endpoint not available – chats will be limited');
+        }
+      } catch (err) {
+        console.error('Unexpected error', err);
+      }
+    };
+    fetchData();
+    console.log(chats);
+  }, []);
 
   const api_url = import.meta.env.VITE_API_URL;
   
@@ -16,7 +37,6 @@ const Messenger = () => {
       method: 'GET',
     });
   }
-
 
   return (
   <>

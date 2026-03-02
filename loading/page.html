@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ВЗЛОМ СИСТЕМЫ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            margin:0;
+            overflow:hidden;
+            background:#000;
+            font-family:'Courier New', Courier, monospace;
+            color:#0f0;
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        canvas {
+            position:fixed;
+            inset:0;
+            width:100%;
+            height:100%;
+            z-index:1;
+        }
+        .container {
+            position:relative;
+            z-index:2;
+            width:100%;
+            max-width:480px;
+            margin:20px;
+            padding:28px 20px;
+            background:rgba(0,0,0,0.75);
+            border:1px solid #0f0;
+            border-radius:8px;
+            box-shadow:0 0 30px rgba(0,255,0,0.25), inset 0 0 20px rgba(0,255,0,0.15);
+            text-align:center;
+        }
+        h1 {
+            font-size: clamp(1.9rem, 8vw, 2.8rem);
+            margin-bottom:16px;
+            text-transform:uppercase;
+            letter-spacing:3px;
+            text-shadow:0 0 12px #0f0;
+            animation:flicker 4s infinite alternate;
+        }
+        p.subtitle {
+            font-size: clamp(1rem, 4.5vw, 1.25rem);
+            margin-bottom:32px;
+            letter-spacing:1.5px;
+            opacity:0.9;
+        }
+        .timer {
+            display:flex;
+            flex-wrap:wrap;
+            justify-content:center;
+            gap:16px;
+        }
+        .time-block {
+            background:rgba(0,20,0,0.85);
+            border:1px solid #0f0;
+            border-radius:6px;
+            padding:16px 12px;
+            min-width:80px;
+            flex:1 1 80px;
+            max-width:110px;
+            box-shadow:0 0 12px rgba(0,255,0,0.35);
+            transition:all 0.25s ease;
+        }
+        .time-block:hover {
+            transform:scale(1.08);
+            box-shadow:0 0 24px #0f0;
+        }
+        .number {
+            font-size: clamp(2.1rem, 10vw, 3.2rem);
+            font-weight:bold;
+            line-height:1;
+            text-shadow:0 0 10px #0f0;
+        }
+        .label {
+            font-size:0.78rem;
+            text-transform:uppercase;
+            letter-spacing:1.2px;
+            margin-top:6px;
+            opacity:0.75;
+        }
+        .footer {
+            margin-top:40px;
+            font-size:0.78rem;
+            opacity:0.6;
+            letter-spacing:1px;
+        }
+        @keyframes flicker {
+            0%,19%,21%,23%,25%,54%,56%,100% { opacity:1; text-shadow:0 0 12px #0f0; }
+            20%,24%,55% { opacity:0.4; text-shadow:none; }
+        }
+        @media (max-width:380px) {
+            .container { margin:12px; padding:20px 16px; }
+            .timer { gap:12px; }
+            .time-block { min-width:70px; padding:12px 8px; }
+            .number { font-size:2.2rem; }
+            h1 { font-size:1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+
+    <div class="container">
+        <h1>DEVELOPMENT IN PROGRESS</h1>
+        <p class="subtitle">Start in:</p>
+
+        <div class="timer">
+            <div class="time-block"><div class="number" id="days">00</div><div class="label">Days</div></div>
+            <div class="time-block"><div class="number" id="hours">00</div><div class="label">Hours</div></div>
+            <div class="time-block"><div class="number" id="minutes">00</div><div class="label">Minutes</div></div>
+            <div class="time-block"><div class="number" id="seconds">00</div><div class="label">Seconds</div></div>
+        </div>
+
+        <div class="footer">ACCESS PROTOCOL ACTIVE // 2026</div>
+    </div>
+
+    <script>
+        // ───────────── Matrix Rain ─────────────
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const chars = 'アカサタナハマヤラワガザダバパイキシチニヒミリヰギジヂビピウクステノヘメユレヲグズデジベペエケセテネヘメヨロヲゴゾドボポオコソトホモヨロヲ0123456789';
+        const fontSize = 14;
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = [];
+
+        // Заполняем капли случайными начальными позициями (отрицательные → уже где-то посередине/внизу)
+        function initDrops() {
+            drops = [];
+            for (let i = 0; i < columns; i++) {
+                // от -canvas.height / fontSize до 0 → символы уже разбросаны по всему экрану
+                drops[i] = Math.random() * (-canvas.height / fontSize * 1.5) - 5;
+            }
+        }
+        initDrops();
+        window.addEventListener('resize', () => {
+            const oldColumns = columns;
+            columns = Math.floor(canvas.width / fontSize);
+            if (columns > oldColumns) {
+                for (let i = oldColumns; i < columns; i++) {
+                    drops[i] = Math.random() * (-canvas.height / fontSize * 1.5) - 5;
+                }
+            }
+        });
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0,0,0,0.07)'; // чуть плотнее затухание для атмосферы
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#0f0';
+            ctx.font = fontSize + 'px Noto Sans SC';
+
+            for (let i = 0; i < drops.length; i++) {
+                if (drops[i] < -1) { // ещё не появились
+                    drops[i] += 0.4 + Math.random() * 0.6; // медленно подползают
+                    continue;
+                }
+
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+
+                // случайная яркость для некоторых символов
+                if (Math.random() > 0.96) ctx.fillStyle = '#3f3';
+                else ctx.fillStyle = '#0f0';
+
+                ctx.fillText(text, x, y);
+
+                if (y > canvas.height) {
+                    drops[i] = Math.random() * -40 - 10; // улетел вниз → респавн сверху с разбросом
+                }
+                drops[i] += 0.8 + Math.random() * 0.5; // скорость чуть варьируется
+            }
+        }
+
+        setInterval(draw, 40);
+
+        // ───────────── Timer ─────────────
+        const launchDate = new Date('2026-03-01T00:00:00').getTime();
+
+        function updateTimer() {
+            const now = Date.now();
+            let distance = launchDate - now;
+
+            if (distance < 0) {
+                document.querySelector('.container').innerHTML = `
+                    <h1 style="font-size: clamp(2.2rem, 10vw, 4rem); animation: flicker 1.2s infinite;">
+                        ДОСТУП ПОЛУЧЕН
+                    </h1>
+                    <p style="font-size:1.4rem; margin:30px 0;">СИСТЕМА ЗАПУЩЕНА</p>
+                    <div class="footer">ONLINE // 2026</div>
+                `;
+                return;
+            }
+
+            const days    = Math.floor(distance / 86400000);
+            const hours   = Math.floor((distance % 86400000) / 3600000);
+            const minutes = Math.floor((distance % 3600000) / 60000);
+            const seconds = Math.floor((distance % 60000) / 1000);
+
+            document.getElementById('days').textContent    = String(days).padStart(2, '0');
+            document.getElementById('hours').textContent   = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+        }
+
+        setInterval(updateTimer, 980);
+        updateTimer();
+    </script>
+</body>
+</html>
+

@@ -1,13 +1,15 @@
 import React, { useState, useContext } from 'react';
 import './AuthPage.css';
-import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { authContext } from "../contexts/AuthContext.jsx";
-import { baseURL, api } from "../api.jsx";
-import Header from './Header'
+import { api, baseURL } from "../api.jsx";
+import { redirect, useNavigate } from "react-router-dom";
 
 const AuthPage = () => {
+
   const navigate = useNavigate();
+  
+  const api_url = baseURL;
   
   const [key, setKey] = useState(0);
 
@@ -50,8 +52,8 @@ const AuthPage = () => {
       triggerAnimation();
       return;
     }
-
-    const response = await fetch(baseURL + '/register', {
+    
+    const response = await fetch(api_url + '/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +70,7 @@ const AuthPage = () => {
       return;
     }
 
-    const loginResponse = await fetch(baseURL + '/login', {
+    const loginResponse = await fetch(api_url + '/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -94,14 +96,17 @@ const AuthPage = () => {
     const data = await loginResponse.json();
     
     localStorage.setItem('token', data.jwt_token);
+    localStorage.setItem('user_id', data.user_id);
+    localStorage.setItem('refresh_token', data.refresh_token);
+
+    navigate("/");
     
   };
   
   const onLoginSubmit = async (e) => {
     e.preventDefault();
-     
-    console.log(baseURL);
-    const loginResponse = await fetch(baseURL + '/login', {
+      
+    const loginResponse = await fetch(api_url + '/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -125,10 +130,13 @@ const AuthPage = () => {
     }
     
     const data = await loginResponse.json();
-
+    
     localStorage.setItem('token', data.jwt_token);
     localStorage.setItem('user_id', data.user_id);
-    navigate('/');
+    localStorage.setItem('refresh_token', data.refresh_token);
+
+    navigate("/");
+
   };
 
   return (
@@ -152,12 +160,12 @@ const AuthPage = () => {
             Register
           </button>
 
-      <div 
-            className="glider"
-              style={{
-                transform: isLogin ? 'translateX(0%)' : 'translateX(105.5%)'
-            }}
-      />
+	  <div 
+    	    className="glider"
+    	      style={{
+      	        transform: isLogin ? 'translateX(0%)' : 'translateX(105.5%)'
+    	    }}
+  	  />
         </div>
 
         <div className="auth-content">

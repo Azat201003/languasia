@@ -46,8 +46,8 @@ const SelectionModal = ({ isOpen, onClose, items, selectedIds, onConfirm, title 
           ))}
         </div>
         <div className="modal-actions">
-          <button onClick={handleConfirm}>Подтвердить</button>
-          <button onClick={onClose}>Отмена</button>
+          <button onClick={handleConfirm}>Submit</button>
+          <button onClick={onClose}>Cancel</button>
         </div>
       </div>
     </div>
@@ -158,17 +158,17 @@ const SearchPeople = () => {
 
     if (user.hobby_title_ids && user.hobby_title_ids.length > 0) {
       const hobbyNames = user.hobby_title_ids.map(id => getHobbyTitle(id)).join(', ');
-      parts.push(`Хобби: ${hobbyNames}`);
+      parts.push(`Hobbies: ${hobbyNames}`);
     }
 
     if (user.known_language_ids && user.known_language_ids.length > 0) {
       const langNames = user.known_language_ids.map(id => getLanguageName(id)).join(', ');
-      parts.push(`Знает: ${langNames}`);
+      parts.push(`Known languages: ${langNames}`);
     }
 
     if (user.learn_language_ids && user.learn_language_ids.length > 0) {
       const langNames = user.learn_language_ids.map(id => getLanguageName(id)).join(', ');
-      parts.push(`Учит: ${langNames}`);
+      parts.push(`Learnt languages: ${langNames}`);
     }
 
     return parts.join(' • ');
@@ -230,7 +230,7 @@ const SearchPeople = () => {
                   className="plus-button"
                   onClick={() => setModalState(prev => ({ ...prev, hobby: true }))}
                   disabled={!hobbies.length}
-                  title={!hobbies.length ? 'Список хобби недоступен' : 'Добавить хобби'}
+                  title={!hobbies.length ? 'Список хобби недоступен' : 'Add hobby'}
                 >
                   +
                 </button>
@@ -248,7 +248,7 @@ const SearchPeople = () => {
                   className="plus-button"
                   onClick={() => setModalState(prev => ({ ...prev, knownLang: true }))}
                   disabled={!languages.length}
-                  title={!languages.length ? 'Список языков недоступен' : 'Добавить язык'}
+                  title={!languages.length ? 'Список языков недоступен' : 'Add language'}
                 >
                   +
                 </button>
@@ -266,7 +266,7 @@ const SearchPeople = () => {
                   className="plus-button"
                   onClick={() => setModalState(prev => ({ ...prev, learnLang: true }))}
                   disabled={!languages.length}
-                  title={!languages.length ? 'Список языков недоступен' : 'Добавить язык'}
+                  title={!languages.length ? 'Список языков недоступен' : 'Add language'}
                 >
                   +
                 </button>
@@ -274,7 +274,7 @@ const SearchPeople = () => {
             </div>
 
             <button className="search-button" onClick={handleSearch} disabled={loading}>
-              {loading ? 'Поиск...' : 'Искать'}
+              {loading ? 'Search...' : 'Search'}
             </button>
           </div>
         </div>
@@ -320,7 +320,7 @@ const SearchPeople = () => {
         items={hobbies}
         selectedIds={selectedHobbyIds}
         onConfirm={setSelectedHobbyIds}
-        title="Выберите хобби"
+        title="Choose hobbies"
       />
 
       <SelectionModal
@@ -329,7 +329,7 @@ const SearchPeople = () => {
         items={languages}
         selectedIds={selectedKnownLangIds}
         onConfirm={setSelectedKnownLangIds}
-        title="Выберите известные языки"
+        title="Choose known languages"
       />
 
       <SelectionModal
@@ -338,7 +338,7 @@ const SearchPeople = () => {
         items={languages}
         selectedIds={selectedLearnLangIds}
         onConfirm={setSelectedLearnLangIds}
-        title="Выберите изучаемые языки"
+        title="Choose learnt languages"
       />
     </>
   );

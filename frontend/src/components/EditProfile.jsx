@@ -43,9 +43,17 @@ const EditProfile = ({
   const [initialLearnLanguageIds, setInitialLearnLanguageIds] = useState([]);
 
   // Input fields for new items
-  const [newHobby, setNewHobby] = useState('');
-  const [newKnownLang, setNewKnownLang] = useState('');
-  const [newLearnLang, setNewLearnLang] = useState('');
+    const [newHobby, setNewHobby] = useState('');
+    const [newKnownLang, setNewKnownLang] = useState('');
+    const [newLearnLang, setNewLearnLang] = useState('');
+
+
+  const onSignOut = async () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("refresh_token");
+    window.location.reload();
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -62,17 +70,13 @@ const EditProfile = ({
     const fetchData = async () => {
       try {
         // Fetch current user
-        const userRes = await fetch('/api/users', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ user_id: userId, page_size: 1 }),
+        const userRes = await api.post('/users', {
+          user_id: parseInt(storedUserId), page_size: 1,
         });
 
-        if (!userRes.ok) throw new Error('Failed to fetch user data');
-        const users = await userRes.json();
+        console.log(userRes);
+
+        const users = userRes.data;
         const user = users[0];
 
         // Populate form
@@ -85,16 +89,12 @@ const EditProfile = ({
 
         // Fetch master data (hobbies and languages)
         const [hobbiesRes, languagesRes] = await Promise.all([
-          fetch('/api/hobbies', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/languages', { headers: { Authorization: `Bearer ${token}` } }),
+          api.get('/hobbies'),
+          api.get('/languages'),
         ]);
 
-        if (!hobbiesRes.ok || !languagesRes.ok) {
-          throw new Error('Failed to fetch reference data');
-        }
-
-        const hobbiesData = await hobbiesRes.json();
-        const languagesData = await languagesRes.json();
+        const hobbiesData = await hobbiesRes.data;
+        const languagesData = await languagesRes.data;
 
         setAllHobbies(hobbiesData);
         setAllLanguages(languagesData);
@@ -102,19 +102,22 @@ const EditProfile = ({
         // Map IDs to titles for display
         setHobbies(
           hobbiesData
-            .filter(h => user.hobby_title_ids.includes(h.id))
+            .filter(h => user.hobby_title_ids.includes(h.hobby_id))
             .map(h => h.title)
         );
         setKnownLanguages(
           languagesData
-            .filter(l => user.known_language_ids.includes(l.id))
+            .filter(l => user.known_language_ids.includes(l.language_id))
             .map(l => l.name)
         );
         setLearnLanguages(
           languagesData
-            .filter(l => user.learn_language_ids.includes(l.id))
+            .filter(l => user.learn_language_ids.includes(l.language_id))
             .map(l => l.name)
         );
+        console.log("hobbies: ", hobbies);
+        console.log("hobbiesData: ", hobbiesData);
+        console.log("user.hobby_title_id: ", user.hobby_title_ids);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -146,29 +149,27 @@ const EditProfile = ({
     }
 
     // Helper to get added/removed IDs based on titles
-    const getChanges = (currentTitles, initialTitles, allItems, titleKey) => {
+    const getChanges = (currentTitles, initialIds, allItems, titleKey, idKey) => {
+      console.log(currentTitles, initialIds, allItems, titleKey, idKey);
       const currentIds = currentTitles
         .map(title => {
           const item = allItems.find(i => i[titleKey] === title);
-          return item ? item.id : null;
+          return item ? item[idKey] : null;
         })
         .filter(id => id !== null);
-
-      const initialIds = initialTitles
-        .map(title => {
-          const item = allItems.find(i => i[titleKey] === title);
-          return item ? item.id : null;
-        })
-        .filter(id => id !== null);
+      
+      console.log(currentIds);
 
       const added = currentIds.filter(id => !initialIds.includes(id));
       const removed = initialIds.filter(id => !currentIds.includes(id));
+
+      console.log(added, removed);
       return { added, removed };
     };
 
-    const hobbyChanges = getChanges(hobbies, initialHobbyTitles, allHobbies, 'title');
-    const knownLangChanges = getChanges(knownLanguages, initialKnownLanguageNames, allLanguages, 'name');
-    const learnLangChanges = getChanges(learnLanguages, initialLearnLanguageNames, allLanguages, 'name');
+    const hobbyChanges = getChanges(hobbies, initialHobbyIds, allHobbies, 'title', 'hobby_id');
+    const knownLangChanges = getChanges(knownLanguages, initialKnownLanguageIds, allLanguages, 'name', 'language_id');
+    const learnLangChanges = getChanges(learnLanguages, initialLearnLanguageIds, allLanguages, 'name', 'language_id');
 
     const payload = {
       description,
@@ -177,31 +178,20 @@ const EditProfile = ({
       add_hobbies: hobbyChanges.added.map(id => ({ hobby_id: id })),
       delete_hobbies: hobbyChanges.removed.map(id => ({ hobby_id: id })),
       add_languages: [
-        ...knownLangChanges.added.map(id => ({ language_id: id, type: 'known' })),
-        ...learnLangChanges.added.map(id => ({ language_id: id, type: 'learn' })),
+        ...knownLangChanges.added.map(id => ({ language_id: id, is_known: true })),
+        ...learnLangChanges.added.map(id => ({ language_id: id, is_known: false })),
       ],
       delete_languages: [
-        ...knownLangChanges.removed.map(id => ({ language_id: id, type: 'known' })),
-        ...learnLangChanges.removed.map(id => ({ language_id: id, type: 'learn' })),
+        ...knownLangChanges.removed.map(id => ({ language_id: id, is_known: true })),
+        ...learnLangChanges.removed.map(id => ({ language_id: id, is_known: false })),
       ],
     };
 
-    try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await api.patch(`/users/${userId}`, 
+        payload,
+      );
 
-      if (!response.ok) throw new Error('Update failed');
-      alert('Profile updated successfully');
       if (onSave) onSave();
-    } catch (err) {
-      alert(err.message);
-    }
   };
 
   const openWindow = (param) => {
@@ -250,7 +240,7 @@ const EditProfile = ({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Введите имя..."
+                  placeholder="Enter nickname..."
                   className="name-input"
                 />
               </div>
@@ -262,18 +252,19 @@ const EditProfile = ({
                   className="description-textarea"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Расскажите о себе, интересах и целях изучения языков..."
+                  placeholder="Enter your description..."
                   rows={5}
                 />
               </div>
 
               {/* Hobbies */}
               <div className="section">
-                <div className="section-title">Хобби</div>
+                <div className="section-title">Hobbies</div>
                 <div>
                   <div className="chip-input-group">
                     <input
                       type="text"
+                      list="hobbies-options"
                       value={newHobby}
                       onChange={(e) => setNewHobby(e.target.value)}
                       onKeyDown={(e) => {
@@ -282,7 +273,7 @@ const EditProfile = ({
                           addItem(newHobby, setHobbies, setNewHobby);
                         }
                       }}
-                      placeholder="Добавить хобби..."
+                      placeholder="Add hobby..."
                       className="chip-input"
                     />
                     <button
@@ -299,11 +290,12 @@ const EditProfile = ({
 
               {/* Known languages */}
               <div className="section">
-                <div className="section-title">Знаю языки</div>
+                <div className="section-title">Known languages</div>
                 <div>
                   <div className="chip-input-group">
                     <input
                       type="text"
+                      list="languages-options"
                       value={newKnownLang}
                       onChange={(e) => setNewKnownLang(e.target.value)}
                       onKeyDown={(e) => {
@@ -312,7 +304,7 @@ const EditProfile = ({
                           addItem(newKnownLang, setKnownLanguages, setNewKnownLang);
                         }
                       }}
-                      placeholder="Добавить язык..."
+                      placeholder="Enter language..."
                       className="chip-input"
                     />
                     <button
@@ -329,10 +321,11 @@ const EditProfile = ({
 
               {/* Learning languages */}
               <div className="section">
-                <div className="section-title">Изучаю языки</div>
+                <div className="section-title">Learn languages</div>
                 <div>
                   <div className="chip-input-group">
                     <input
+                      list="languages-options"
                       type="text"
                       value={newLearnLang}
                       onChange={(e) => setNewLearnLang(e.target.value)}
@@ -342,7 +335,7 @@ const EditProfile = ({
                           addItem(newLearnLang, setLearnLanguages, setNewLearnLang);
                         }
                       }}
-                      placeholder="Добавить язык..."
+                      placeholder="Add language..."
                       className="chip-input"
                     />
                     <button
@@ -360,12 +353,25 @@ const EditProfile = ({
               {/* Footer buttons */}
               <div className="profile-footer" style={{ display: 'flex', gap: '16px' }}>
                 <button type="submit" className="edit-btn">
-                  Сохранить изменения
+                  Save changes
                 </button>
                 <button type="button" className="edit-btn cancel-btn" onClick={onCancel}>
-                  Отмена
+                  Cancel
+                </button>
+                <button type="button" className="edit-btn signout-btn" onClick={onSignOut}>
+                  Sign out
                 </button>
               </div>
+                <datalist id="hobbies-options">
+                  {allHobbies.map((item, index) => (
+                    <option value={item.title} />
+                  ))}
+                </datalist>
+                <datalist id="languages-options">
+                  {allLanguages.map((item, index) => (
+                    <option value={item.name} />
+                  ))}
+                </datalist>
             </form>
           </div>
         </div>

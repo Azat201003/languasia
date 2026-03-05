@@ -276,6 +276,7 @@ body {
 .modal-item {
   display: block;
   padding: 5px 0;
+  margin-left: 5px;
 }
 
 .modal-actions {

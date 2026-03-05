@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, BrowserRouter, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, BrowserRouter, Route, useNavigate, Navigate, Outlet } from 'react-router-dom';
 import {AuthPage} from './components/AuthPage';
 import {EditProfile} from './components/EditProfile';
 import {SearchPeople} from './components/SearchPeople';
@@ -24,7 +24,7 @@ function App() {
           <Route path="/auth" element={< AuthPage/>} />
           <Route element={<ProtectedRoute />}>
           <Route path="/" element={< Messenger />} />
-          <Route path="/messanger" element={< Messenger />} />
+          <Route path="/messenger" element={< Messenger />} />
           <Route path="/my" element={<EditProfile
              initialDescription={""}
              initialHobbyTitles={["hdbvfl"]}
@@ -34,10 +34,12 @@ function App() {
                updateUser(data);
                navigate('/profile');
              }}
-             onCancel={() => navigate(-1)}
+             onCancel={() => {
+                return <Navigate to="/auth" replace />}
+             }
            />} />
-           <Route path="/search" element={<SearchPeople/>} />
-        </Route>
+          <Route path="/search" element={<SearchPeople/>} />
+          </Route>
         </Routes>
     </BrowserRouter>
   );

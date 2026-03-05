@@ -138,6 +138,8 @@
 .chip-input-group {
   display: flex;
   gap: 8px;
+  margin-bottom: 10px;
+  margin-top: 5px;
 }
 
 .chip-input {
@@ -200,6 +202,14 @@
 
 .cancel-btn:hover {
   background-color: #444;
+}
+
+.signout-btn {
+  background-color: #a93636;
+}
+
+.signout-btn:hover {
+  background-color: #6f2d2d;
 }
 
 .edit-card {

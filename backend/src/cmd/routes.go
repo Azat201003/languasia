@@ -506,3 +506,23 @@ func addMember(c *echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+func getMyUser(c *echo.Context) error {
+	userId, ok := c.Get("user_id").(uint64)
+	if !ok {
+		return c.String(http.StatusUnauthorized, "Cannot parse user_id")
+	}
+	users, err := database.DBC.RecieveFilteredUsers(&database.UserFilter{
+		UserId: userId,
+	})
+
+	if err != nil {
+		return c.String(http.StatusUnauthorized, fmt.Sprintf("Cannot find user: %v", err.Error()))
+	}
+
+	if len(users) < 1 {
+		return c.String(http.StatusUnauthorized, "No users found")
+	}
+	user := users[0]
+	return c.JSON(http.StatusOK, user)
+}
+

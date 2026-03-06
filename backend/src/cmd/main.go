@@ -108,7 +108,7 @@ func main() {
 	e.GET("/hobbies", getListHobbies)
 
 	e.GET("/users/:user_id/chats", getChatList)
-	e.GET("/users/:user_id/chats/:chat_id", getChat)
+	e.GET("/chats/:chat_id", getChat)
 
 	e.GET("/ws", connectWebSocket)
 

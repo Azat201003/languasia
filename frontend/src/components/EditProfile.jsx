@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './EditProfile.css';
 import { api } from "../api.jsx";
+import { useNavigate } from 'react-router-dom';
 // import Logo from '../assets/Logo.svg'; // not used
 import Settings from '../assets/settings.svg';
 import Header from './Header';
@@ -13,8 +14,8 @@ const EditProfile = ({
   initialKnownLanguageNames = [],
   initialLearnLanguageNames = [],
   onSave,
-  onCancel,
 }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -55,7 +56,12 @@ const EditProfile = ({
     window.location.reload();
   }
 
-  useEffect(() => {
+  const onCancel = async () => {
+    navigate("/");
+    window.location.reload();
+  }
+  
+    useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('user_id');
 
@@ -70,14 +76,11 @@ const EditProfile = ({
     const fetchData = async () => {
       try {
         // Fetch current user
-        const userRes = await api.post('/users', {
-          user_id: parseInt(storedUserId), page_size: 1,
-        });
+        const userRes = await api.get('/my');
 
         console.log(userRes);
 
-        const users = userRes.data;
-        const user = users[0];
+        const user = userRes.data;
 
         // Populate form
         setName(user.nickname || '');
@@ -226,7 +229,7 @@ const EditProfile = ({
         <div className="profile-card">
           <div className="profile-content">
             <form onSubmit={handleSubmit}>
-              {/* Name and color */}
+              {/* Color */}
               <div className="section name-section">
                 <div className="color-wrapper">
                   <input
@@ -236,6 +239,11 @@ const EditProfile = ({
                     className="view-profile"
                   />
                 </div>
+              </div>
+              
+              {/* Name */}
+              <div className="section name-section">
+                <div className="section-title">Nickname</div>
                 <input
                   type="text"
                   value={name}
@@ -247,7 +255,7 @@ const EditProfile = ({
 
               {/* About */}
               <div className="section">
-                <div className="section-title">О себе</div>
+                <div className="section-title">Bio</div>
                 <textarea
                   className="description-textarea"
                   value={description}

@@ -42,6 +42,7 @@ api.interceptors.response.use(
       const data = await loginResponse.json();
 
       localStorage.setItem('token', data.jwt_token);
+      return api(originalRequest);
     }
   }
 );

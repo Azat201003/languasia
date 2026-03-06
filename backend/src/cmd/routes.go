@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -399,23 +400,53 @@ func getChatList(c *echo.Context) error {
 	}
 
 	chats, err := database.DBC.MyChats(userId)
+	for i := range chats {
+		if chats[i].Type == "Direct" {
+			title, err := getDirectChatTitle(userId, chats[i].ChatId)
+			if err == nil {
+				chats[i].Title = title
+			}
+			if len(chats[i].MemberIds) > 2 {
+				chats[i].MemberIds = chats[i].MemberIds[0:2]
+			}
+		}
+	}
 	if err != nil {
 		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot get chat list: %v", err.Error()))
 	}
 	return c.JSON(http.StatusOK, chats)
 }
 
-func getChat(c *echo.Context) error {	
-	userIdString := c.ParamOr("user_id", "0")
-
-	userId, err := strconv.ParseUint(userIdString, 10, 64)
+func getDirectChatTitle(myUserId, chatId uint64) (string, error) {
+	memberIds, err := database.DBC.GetChatMembers(chatId)
 	if err != nil {
-		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse user_id: %v", err.Error()))
-		return err
+		return "", err
 	}
+	if len(memberIds) < 2 {
+		return "", errors.New("...")
+	}
+	fmt.Println("Member ids: ", memberIds)
+	var memberId uint64
+	if memberIds[0] == myUserId {
+		memberId = memberIds[1]
+	} else {
+		memberId = memberIds[0]
+	}
+	members, err := database.DBC.RecieveFilteredUsers(&database.UserFilter{UserId: memberId})
+	if err != nil {
+		return "", err
+	}
+	if len(members) == 0 {
+		return "", errors.New("...")
+	}
+	fmt.Println("Member: ", members[0])
+	return members[0].Nickname, nil 
+}
 
-	if c.Get("user_id") != userId {
-		return c.String(http.StatusUnauthorized, fmt.Sprintf("Token's user_id and put user_id not match: %v != %v", userId, c.Get("user_id")))
+func getChat(c *echo.Context) error {	
+	userId, ok := c.Get("user_id").(uint64)
+	if !ok {
+		return c.String(http.StatusBadRequest, "Cannot parse user_id from token")
 	}
 
 	chatIdString := c.ParamOr("chat_id", "0")
@@ -429,7 +460,15 @@ func getChat(c *echo.Context) error {
 
 	chat, err := database.DBC.GetChat(chatId)
 	if err != nil {
-		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot get members: %v", err.Error()))
+		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot get chat: %v", err.Error()))
+	}
+
+	if chat.Type == "Direct" {
+		title, err := getDirectChatTitle(userId, chat.ChatId)
+		if err == nil {
+			chat.Title = title
+		}	
+		fmt.Println("title: ", title)
 	}
 
 	var memberIds []int64
@@ -462,6 +501,13 @@ func createChat(c *echo.Context) error {
 
 	if err != nil {
 		return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add you to chat :(. (btw chat created and it is just trash)")
+	}
+	
+	if request.Type == "Direct" {
+		err = database.DBC.JoinChat(chatId, request.GoalId)
+		if err != nil {
+			return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add user to chat :(. (btw chat created and it is just trash)")
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]any{

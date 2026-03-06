@@ -436,6 +436,7 @@ type Chat struct {
 	Title  string `json:"title"`
 	Type   string `json:"type"`
 	MemberIds pq.Int64Array `json:"member_ids" gorm:"type:serial[]"`
+	GoalId uint64 `json:"goal_id"` // For type="Direct"
 }
 
 func (dbc *DBController) CreateChat(chat *Chat) (chatId uint64, err error) {

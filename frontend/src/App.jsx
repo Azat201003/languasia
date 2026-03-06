@@ -34,9 +34,6 @@ function App() {
                updateUser(data);
                navigate('/profile');
              }}
-             onCancel={() => {
-                return <Navigate to="/auth" replace />}
-             }
            />} />
           <Route path="/search" element={<SearchPeople/>} />
           </Route>

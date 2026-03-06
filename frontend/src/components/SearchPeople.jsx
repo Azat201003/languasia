@@ -209,11 +209,11 @@ const SearchPeople = () => {
           <div className="search-form">
             {/* Free‑text search */}
             <div className="search-field">
-              <label className="search-label">Поисковая строка</label>
+              <label className="search-label">Search string</label>
               <input
                 type="text"
                 className="search-input"
-                placeholder="Имя, ник, ключевые слова"
+                placeholder="Name, keywords, etc"
                 value={searchString}
                 onChange={(e) => setSearchString(e.target.value)}
               />
@@ -221,7 +221,7 @@ const SearchPeople = () => {
 
             {/* Hobbies field with tags and plus button */}
             <div className="search-field">
-              <label className="search-label">Хобби</label>
+              <label className="search-label">Hobbies</label>
               <div className="selection-container">
                 <div className="tags-container">
                   {renderTags(selectedHobbyIds, 'hobby')}
@@ -230,7 +230,7 @@ const SearchPeople = () => {
                   className="plus-button"
                   onClick={() => setModalState(prev => ({ ...prev, hobby: true }))}
                   disabled={!hobbies.length}
-                  title={!hobbies.length ? 'Список хобби недоступен' : 'Add hobby'}
+                  title={!hobbies.length ? 'List of hobbies is unavailable' : 'Add hobby'}
                 >
                   +
                 </button>
@@ -239,7 +239,7 @@ const SearchPeople = () => {
 
             {/* Known languages field */}
             <div className="search-field">
-              <label className="search-label">Известные языки</label>
+              <label className="search-label">Known languages</label>
               <div className="selection-container">
                 <div className="tags-container">
                   {renderTags(selectedKnownLangIds, 'known')}
@@ -248,7 +248,7 @@ const SearchPeople = () => {
                   className="plus-button"
                   onClick={() => setModalState(prev => ({ ...prev, knownLang: true }))}
                   disabled={!languages.length}
-                  title={!languages.length ? 'Список языков недоступен' : 'Add language'}
+                  title={!languages.length ? 'List of languages is unavailable' : 'Add language'}
                 >
                   +
                 </button>
@@ -257,7 +257,7 @@ const SearchPeople = () => {
 
             {/* Learning languages field */}
             <div className="search-field">
-              <label className="search-label">Изучаемые языки</label>
+              <label className="search-label">Learning langugaes</label>
               <div className="selection-container">
                 <div className="tags-container">
                   {renderTags(selectedLearnLangIds, 'learn')}
@@ -266,7 +266,7 @@ const SearchPeople = () => {
                   className="plus-button"
                   onClick={() => setModalState(prev => ({ ...prev, learnLang: true }))}
                   disabled={!languages.length}
-                  title={!languages.length ? 'Список языков недоступен' : 'Add language'}
+                  title={!languages.length ? 'List of languages is unavailable' : 'Add language'}
                 >
                   +
                 </button>
@@ -280,12 +280,12 @@ const SearchPeople = () => {
         </div>
 
         <div className="results-area">
-          <div className="results-header">Результаты поиска</div>
+          <div className="results-header">Search result</div>
           <div className="results-list">
-            {loading && <div className="no-results">Загрузка...</div>}
-            {error && <div className="no-results">Ошибка: {error}</div>}
+            {loading && <div className="no-results">Loading...</div>}
+            {error && <div className="no-results">Error: {error}</div>}
             {!loading && !error && users.length === 0 && (
-              <div className="no-results">Ничего не найдено</div>
+              <div className="no-results">Nothing found</div>
             )}
             {!loading && !error && users.map((user) => (
               <div key={user.user_id} className="chat-item">
@@ -297,7 +297,7 @@ const SearchPeople = () => {
                 />
                 <div className="chat-info">
                   <div className="chat-name">
-                    {user.nickname || user.username || 'Пользователь'}
+                    {user.nickname || user.username || 'User'}
                   </div>
                   <div className="chat-preview">{formatPreview(user)}</div>
                   {user.description && (
@@ -307,6 +307,7 @@ const SearchPeople = () => {
                   )}
                 </div>
                 <div className="chat-status"> </div>
+                <button>Create chat</button>
               </div>
             ))}
           </div>

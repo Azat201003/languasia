@@ -75,6 +75,7 @@ func (h *WebSocketHub) Run() {
 			fmt.Printf("[HUB] Registering client: %v\n", client)
 			h.mutex.Lock()
 			clientId := h.getUniqueClientId()
+            client.clientId = clientId
 			h.clients[clientId] = client
 			h.mutex.Unlock()
 			fmt.Printf("[HUB] Client registered on id %d. Total clients: %d\n", clientId, len(h.clients))
@@ -94,6 +95,7 @@ func (h *WebSocketHub) Run() {
 			} else {
 				fmt.Printf("[HUB] Client not found during unregister: %v\n", client)
 			}
+            delete(h.clients, client.clientId)
 			h.mutex.Unlock()
 
 		case broadcast := <-h.broadcast:
@@ -108,6 +110,7 @@ func (h *WebSocketHub) Run() {
 				containsUser = true
 			} else {
 				userIds, err := database.DBC.GetChatMembers(broadcast.ChatId)
+                fmt.Println(userIds)
 
 				containsUser = true
 				if !slices.Contains(userIds, broadcast.UserId) {
@@ -173,12 +176,12 @@ func (h *WebSocketHub) Run() {
 
 			fmt.Println("[HUB] Broadcast completed")
 		}
-	}
+    }
 }
 
 func (h *WebSocketHub) getUniqueClientId() uint64 {
-	var i uint64 = 1
-	for ; h.clients[i] != nil; i++ {
+    var i uint64 = 1
+    for ; h.clients[i] != nil; i++ {
 	}
 	return i
 }
@@ -236,7 +239,13 @@ func (c *Client) readPump(hub *WebSocketHub) {
 				fmt.Printf("[READ_PUMP] Error parsing message from %s: %v 2\n", c.user.Username, err)
 				continue
 			}
-			hub.broadcast <- Broadcast{chatMessage.ChatId, c.user.UserId, chatMessage.Content, time.Now(), 0}
+			hub.broadcast <- Broadcast{
+                ChatId: chatMessage.ChatId,
+                UserId: c.user.UserId,
+                Content: chatMessage.Content,
+                CreatedAt: time.Now(),
+                MessageId: 0,
+            }
 
 		case "recieve_messages":
 			fmt.Println("[READ_PUMP] Received messages")

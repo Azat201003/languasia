@@ -435,6 +435,7 @@ type Chat struct {
 	ChatId uint64 `json:"chat_id"`
 	Title  string `json:"title"`
 	Type   string `json:"type"`
+	Color  string `json:"color"`
 	MemberIds pq.Int64Array `json:"member_ids" gorm:"type:serial[]"`
 	GoalId uint64 `json:"goal_id"` // For type="Direct"
 }

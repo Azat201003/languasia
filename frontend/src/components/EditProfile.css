@@ -168,7 +168,7 @@
   cursor: pointer;
   transition: background-color 0.2s;
   height: 50px;
-  display: flex;
+  width: 50px;
 }
 
 .chip-add-btn:hover {

@@ -3,57 +3,6 @@ import './SearchPeople.css';
 import { api } from "../api.jsx";
 import Header from './Header';
 
-// Reusable modal for selecting multiple items from a list
-const SelectionModal = ({ isOpen, onClose, items, selectedIds, onConfirm, title }) => {
-  const [localSelected, setLocalSelected] = useState(selectedIds);
-
-  // Reset local state when modal opens with new props
-  useEffect(() => {
-    if (isOpen) {
-      setLocalSelected(selectedIds);
-    }
-  }, [isOpen, selectedIds]);
-
-  if (!isOpen) return null;
-
-  const handleCheckboxChange = (id) => {
-    setLocalSelected(prev =>
-      prev.includes(id)
-        ? prev.filter(itemId => itemId !== id)
-        : [...prev, id]
-    );
-  };
-
-  const handleConfirm = () => {
-    onConfirm(localSelected);
-    onClose();
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <h3>{title}</h3>
-        <div className="modal-list">
-          {items.map(item => (
-            <label key={item.language_id || item.hobby_id} className="modal-item">
-              <input
-                type="checkbox"
-                checked={localSelected.includes(item.language_id || item.hobby_id)}
-                onChange={() => handleCheckboxChange(item.language_id || item.hobby_id)}
-              />
-              {item.name || item.title}
-            </label>
-          ))}
-        </div>
-        <div className="modal-actions">
-          <button onClick={handleConfirm}>Submit</button>
-          <button onClick={onClose}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const SearchPeople = () => {
   const [users, setUsers] = useState([]);
   const [languages, setLanguages] = useState([]);
@@ -66,12 +15,10 @@ const SearchPeople = () => {
   const [selectedKnownLangIds, setSelectedKnownLangIds] = useState([]);
   const [selectedLearnLangIds, setSelectedLearnLangIds] = useState([]);
 
-  // Modal visibility per category
-  const [modalState, setModalState] = useState({
-    hobby: false,
-    knownLang: false,
-    learnLang: false,
-  });
+  // Input values for the chip fields
+  const [hobbyInput, setHobbyInput] = useState('');
+  const [knownLangInput, setKnownLangInput] = useState('');
+  const [learnLangInput, setLearnLangInput] = useState('');
 
   // Free‑text search string
   const [searchString, setSearchString] = useState('');
@@ -82,7 +29,7 @@ const SearchPeople = () => {
       try {
         const [langRes, hobbyRes] = await Promise.allSettled([
           api.get('/languages'),
-          api.get('/hobbies') // may fail if endpoint doesn't exist
+          api.get('/hobbies')
         ]);
 
         if (langRes.status === 'fulfilled') {
@@ -106,11 +53,11 @@ const SearchPeople = () => {
 
   const createChat = async (goalId) => {
     api.post("/chats", {
-        "title": "doesn't matter",
-        "goal_id": goalId,
-        "type": "Direct"
-    })
-  }
+      title: "doesn't matter",
+      goal_id: goalId,
+      type: "Direct"
+    });
+  };
 
   // Helper: get language name by ID
   const getLanguageName = (id) => {
@@ -124,6 +71,37 @@ const SearchPeople = () => {
     return hobby ? hobby.title : id;
   };
 
+  // Handlers for adding items from the input field
+  const handleAddHobby = () => {
+    const trimmed = hobbyInput.trim();
+    if (!trimmed) return;
+    const hobby = hobbies.find(h => h.title.toLowerCase() === trimmed.toLowerCase());
+    if (hobby && !selectedHobbyIds.includes(hobby.hobby_id)) {
+      setSelectedHobbyIds(prev => [...prev, hobby.hobby_id]);
+    }
+    setHobbyInput('');
+  };
+
+  const handleAddKnownLang = () => {
+    const trimmed = knownLangInput.trim();
+    if (!trimmed) return;
+    const lang = languages.find(l => l.name.toLowerCase() === trimmed.toLowerCase());
+    if (lang && !selectedKnownLangIds.includes(lang.language_id)) {
+      setSelectedKnownLangIds(prev => [...prev, lang.language_id]);
+    }
+    setKnownLangInput('');
+  };
+
+  const handleAddLearnLang = () => {
+    const trimmed = learnLangInput.trim();
+    if (!trimmed) return;
+    const lang = languages.find(l => l.name.toLowerCase() === trimmed.toLowerCase());
+    if (lang && !selectedLearnLangIds.includes(lang.language_id)) {
+      setSelectedLearnLangIds(prev => [...prev, lang.language_id]);
+    }
+    setLearnLangInput('');
+  };
+
   const handleSearch = async () => {
     setLoading(true);
     setError(null);
@@ -132,7 +110,6 @@ const SearchPeople = () => {
 
     if (searchString) filter.search_string = searchString;
 
-    // Use selected IDs directly
     if (selectedHobbyIds.length > 0) {
       filter.hobbies = selectedHobbyIds;
     }
@@ -145,7 +122,6 @@ const SearchPeople = () => {
       filter.learn_languages = selectedLearnLangIds;
     }
 
-    // Pagination defaults
     filter.page_size = 100;
     filter.page_number = 1;
 
@@ -182,17 +158,17 @@ const SearchPeople = () => {
     return parts.join(' • ');
   };
 
-  // Render selected items as tags with remove button
-  const renderTags = (ids, type) => {
+  // Render chips with remove button (edit‑profile style)
+  const renderChips = (ids, type) => {
     const items = type === 'hobby'
       ? ids.map(id => ({ id, name: getHobbyTitle(id) }))
       : ids.map(id => ({ id, name: getLanguageName(id) }));
 
     return items.map(item => (
-      <span key={item.id} className="tag">
+      <span key={item.id} className={`chip ${type === 'learn' ? 'learn' : ''}`}>
         {item.name}
-        <button
-          className="tag-remove"
+        <span
+          className="chip-close"
           onClick={() => {
             if (type === 'hobby') {
               setSelectedHobbyIds(prev => prev.filter(id => id !== item.id));
@@ -203,8 +179,8 @@ const SearchPeople = () => {
             }
           }}
         >
-          ✕
-        </button>
+          ×
+        </span>
       </span>
     ));
   };
@@ -227,63 +203,120 @@ const SearchPeople = () => {
               />
             </div>
 
-            {/* Hobbies field with tags and plus button */}
+            {/* Hobbies field with chip input */}
             <div className="search-field">
               <label className="search-label">Hobbies</label>
-              <div className="selection-container">
-                <div className="tags-container">
-                  {renderTags(selectedHobbyIds, 'hobby')}
-                </div>
+              <div className="chip-input-group">
+                <input
+                  type="text"
+                  list="hobbies-options"
+                  value={hobbyInput}
+                  onChange={(e) => setHobbyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddHobby();
+                    }
+                  }}
+                  placeholder="Add hobby..."
+                  className="chip-input"
+                />
                 <button
-                  className="plus-button"
-                  onClick={() => setModalState(prev => ({ ...prev, hobby: true }))}
+                  type="button"
+                  onClick={handleAddHobby}
+                  className="chip-add-btn"
                   disabled={!hobbies.length}
                   title={!hobbies.length ? 'List of hobbies is unavailable' : 'Add hobby'}
                 >
                   +
                 </button>
               </div>
+              <div className="chips">
+                {renderChips(selectedHobbyIds, 'hobby')}
+              </div>
             </div>
 
             {/* Known languages field */}
             <div className="search-field">
               <label className="search-label">Known languages</label>
-              <div className="selection-container">
-                <div className="tags-container">
-                  {renderTags(selectedKnownLangIds, 'known')}
-                </div>
+              <div className="chip-input-group">
+                <input
+                  type="text"
+                  list="languages-options"
+                  value={knownLangInput}
+                  onChange={(e) => setKnownLangInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddKnownLang();
+                    }
+                  }}
+                  placeholder="Add language..."
+                  className="chip-input"
+                />
                 <button
-                  className="plus-button"
-                  onClick={() => setModalState(prev => ({ ...prev, knownLang: true }))}
+                  type="button"
+                  onClick={handleAddKnownLang}
+                  className="chip-add-btn"
                   disabled={!languages.length}
                   title={!languages.length ? 'List of languages is unavailable' : 'Add language'}
                 >
                   +
                 </button>
               </div>
+              <div className="chips">
+                {renderChips(selectedKnownLangIds, 'known')}
+              </div>
             </div>
 
             {/* Learning languages field */}
             <div className="search-field">
-              <label className="search-label">Learning langugaes</label>
-              <div className="selection-container">
-                <div className="tags-container">
-                  {renderTags(selectedLearnLangIds, 'learn')}
-                </div>
+              <label className="search-label">Learning languages</label>
+              <div className="chip-input-group">
+                <input
+                  type="text"
+                  list="languages-options"
+                  value={learnLangInput}
+                  onChange={(e) => setLearnLangInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddLearnLang();
+                    }
+                  }}
+                  placeholder="Add language..."
+                  className="chip-input"
+                />
                 <button
-                  className="plus-button"
-                  onClick={() => setModalState(prev => ({ ...prev, learnLang: true }))}
+                  type="button"
+                  onClick={handleAddLearnLang}
+                  className="chip-add-btn"
                   disabled={!languages.length}
                   title={!languages.length ? 'List of languages is unavailable' : 'Add language'}
                 >
                   +
                 </button>
+              </div>
+              <div className="chips">
+                {renderChips(selectedLearnLangIds, 'learn')}
               </div>
             </div>
 
             <button className="search-button" onClick={handleSearch} disabled={loading}>
               {loading ? 'Search...' : 'Search'}
             </button>
+
+            {/* Datalists for suggestions */}
+            <datalist id="hobbies-options">
+              {hobbies.map(hobby => (
+                <option key={hobby.hobby_id} value={hobby.title} />
+              ))}
+            </datalist>
+            <datalist id="languages-options">
+              {languages.map(lang => (
+                <option key={lang.language_id} value={lang.name} />
+              ))}
+            </datalist>
           </div>
         </div>
 
@@ -299,9 +332,7 @@ const SearchPeople = () => {
               <div key={user.user_id} className="chat-item">
                 <div
                   className="chat-avatar"
-                  style={{
-                    backgroundColor: user.color || '#333',
-                  }}
+                  style={{ backgroundColor: user.color || '#333' }}
                 />
                 <div className="chat-info">
                   <div className="chat-name">
@@ -315,42 +346,14 @@ const SearchPeople = () => {
                   )}
                 </div>
                 <div className="chat-status"> </div>
-                <button className="chat-create-btn" onClick={() => {
-                    createChat(user.user_id);
-                }}>Create chat</button>
+                <button className="chat-create-btn" onClick={() => createChat(user.user_id)}>
+                  Create chat
+                </button>
               </div>
             ))}
           </div>
         </div>
       </div>
-
-      {/* Modals for selection */}
-      <SelectionModal
-        isOpen={modalState.hobby}
-        onClose={() => setModalState(prev => ({ ...prev, hobby: false }))}
-        items={hobbies}
-        selectedIds={selectedHobbyIds}
-        onConfirm={setSelectedHobbyIds}
-        title="Choose hobbies"
-      />
-
-      <SelectionModal
-        isOpen={modalState.knownLang}
-        onClose={() => setModalState(prev => ({ ...prev, knownLang: false }))}
-        items={languages}
-        selectedIds={selectedKnownLangIds}
-        onConfirm={setSelectedKnownLangIds}
-        title="Choose known languages"
-      />
-
-      <SelectionModal
-        isOpen={modalState.learnLang}
-        onClose={() => setModalState(prev => ({ ...prev, learnLang: false }))}
-        items={languages}
-        selectedIds={selectedLearnLangIds}
-        onConfirm={setSelectedLearnLangIds}
-        title="Choose learnt languages"
-      />
     </>
   );
 };

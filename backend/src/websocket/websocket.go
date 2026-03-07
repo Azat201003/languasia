@@ -111,6 +111,7 @@ func (h *WebSocketHub) Run() {
 			} else {
 				userIds, err := database.DBC.GetChatMembers(broadcast.ChatId)
                 fmt.Println(userIds)
+                fmt.Println("h.clients", h.clients)
 
 				containsUser = true
 				if !slices.Contains(userIds, broadcast.UserId) {

@@ -3,6 +3,7 @@ services:
     build: frontend
     container_name: languasia-front
     depends_on:
+      - proxy
       - app
     expose:
       - 1234
@@ -26,6 +27,7 @@ services:
     networks:
       - languasia-network
     depends_on:
+      - proxy
       - database
     restart: unless-stopped
     healthcheck:
@@ -60,6 +62,8 @@ services:
   swagger-ui:
     image: docker.swagger.io/swaggerapi/swagger-ui
     container_name: languasia-swagger-ui
+    depends_on:
+      - proxy
     volumes:
       - ./backend/openapi.yml:/openapi.yaml
     environment:
@@ -74,10 +78,6 @@ services:
       - 443:443
       - 80:80
       - 67:67
-    depends_on:
-      - app
-      - frontend
-      - swagger-ui
     volumes:
       - ./nginx:/etc/nginx:ro
       - ./loading:/var/www/html/loading:ro

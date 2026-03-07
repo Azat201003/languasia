@@ -134,7 +134,6 @@ body {
   display: flex;
   align-items: center;
   padding: 14px 20px;
-  cursor: pointer;
   transition: background-color 0.2s;
   border-bottom: 1px solid #222;
 }
@@ -174,6 +173,16 @@ body {
   font-size: 12px;
   color: #666;
   margin-left: 12px;
+}
+.chat-create-btn {
+  cursor: pointer;
+  width: 100px;
+  height: 40px;
+  background-color: rgb(64, 178, 110);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-weight: 600;
 }
 .no-results {
   flex: 1;
@@ -296,3 +305,4 @@ body {
 input[type="checkbox"] {
   accent-color: #40b26e;
 }
+

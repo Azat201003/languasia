@@ -1,26 +1,45 @@
 openapi: 3.0.0
 info:
   title: Languasia API
-  description: Language learning social network API
+  description: |
+    Language learning social network API.
+    
+    ## Authentication
+    Most endpoints require JWT authentication. Include the JWT token in the Authorization header:
+    ```
+    Authorization: Bearer <jwt_token>
+    ```
+    
+    JWT tokens are obtained from `/login` endpoint and refreshed via `/refresh`.
+    
+    ## WebSocket
+    The `/ws` endpoint provides real-time messaging capabilities. Connect with JWT authentication.
   version: 1.0.0
 servers:
   - url: https://95.165.132.221/api
     description: Production server
+  - url: http://localhost:8080
+    description: Local development server
 
 paths:
   /ping:
     get:
       summary: Health check endpoint
+      description: Returns "pong" to indicate the server is running
       responses:
         '200':
           description: Server is running
           content:
             text/plain:
+              schema:
+                type: string
               example: pong
 
   /register:
     post:
       summary: Register a new user
+      description: |
+        Creates a new user account. Password must be at least 2 characters.
       requestBody:
         required: true
         content:
@@ -34,13 +53,15 @@ paths:
             text/plain:
               example: Registered
         '400':
-          description: Bad request - invalid data
+          description: Bad request - invalid data or password too short
         '422':
-          description: Cannot create user
+          description: Cannot create user - username may already exist
 
   /login:
     post:
       summary: Authenticate user and get tokens
+      description: |
+        Authenticates user with username and password. Returns JWT token, refresh token, and user ID.
       requestBody:
         required: true
         content:
@@ -57,20 +78,25 @@ paths:
                 properties:
                   refresh_token:
                     type: string
+                    description: Long-lived refresh token for obtaining new JWTs
                   jwt_token:
                     type: string
+                    description: Short-lived JWT access token (1 hour expiration)
                   user_id:
                     type: integer
+                    format: uint64
+                    description: The authenticated user's ID
         '401':
-          description: Invalid credentials
+          description: Invalid password
         '422':
-          description: Cannot find user
-        '500':
-          description: Internal server error
+          description: User not found - username does not exist
 
   /refresh:
     post:
       summary: Refresh JWT token using refresh token
+      description: |
+        Exchange a refresh token for a new JWT access token.
+        The refresh token is long-lived and obtained from login.
       requestBody:
         required: true
         content:
@@ -90,11 +116,31 @@ paths:
                   jwt_token:
                     type: string
         '401':
-          description: Invalid refresh token
+          description: Invalid or expired refresh token
+
+  /my:
+    get:
+      summary: Get current user profile
+      description: |
+        Returns the profile of the currently authenticated user (based on JWT token).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithDetails'
+        '401':
+          description: Unauthorized - invalid or missing token
 
   /users:
     post:
       summary: Get filtered users list
+      description: |
+        Returns a list of users matching the provided filters.
+        Results are sorted by relevance (matching hobbies, languages) and text similarity.
       security:
         - bearerAuth: []
       requestBody:
@@ -120,6 +166,8 @@ paths:
   /users/{user_id}:
     delete:
       summary: Delete user account
+      description: |
+        Deletes the user's own account. The user_id in the path must match the authenticated user's ID from the JWT token.
       security:
         - bearerAuth: []
       parameters:
@@ -128,21 +176,26 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
+          description: The ID of the user to delete
       responses:
         '200':
           description: User deleted successfully
           content:
             text/plain:
-              example: User successfully deleted
+              example: User succefully deleted
         '400':
-          description: Invalid user ID
+          description: Invalid user ID format
         '401':
-          description: Unauthorized or user ID mismatch
+          description: Unauthorized - token user_id does not match path user_id
         '418':
-          description: Cannot delete user
+          description: Cannot delete user - may have related records
 
     patch:
       summary: Update user information
+      description: |
+        Updates user profile. The user_id in the path must match the authenticated user's ID.
+        Supports partial updates - only include fields you want to change.
       security:
         - bearerAuth: []
       parameters:
@@ -151,6 +204,8 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
+          description: The ID of the user to update
       requestBody:
         required: true
         content:
@@ -162,15 +217,18 @@ paths:
           description: User updated successfully
           content:
             text/plain:
-              example: Successfully updated
+              example: Succesfully updated
         '400':
-          description: Invalid request data
+          description: Invalid request data or password too short
         '401':
-          description: Unauthorized or user ID mismatch
+          description: Unauthorized - token user_id does not match path user_id
 
   /users/{user_id}/languages:
     post:
       summary: Add language to user profile
+      description: |
+        Adds a language to the user's profile. The user_id must match the authenticated user.
+        Use is_known: true for languages you know, false for languages you're learning.
       security:
         - bearerAuth: []
       parameters:
@@ -179,6 +237,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
       requestBody:
         required: true
         content:
@@ -189,13 +248,15 @@ paths:
         '200':
           description: Language added successfully
         '400':
-          description: Invalid request data
+          description: Invalid request data or language already exists
         '401':
-          description: Unauthorized or user ID mismatch
+          description: Unauthorized - token user_id does not match path user_id
 
   /users/{user_id}/languages/{language_id}:
     delete:
       summary: Remove language from user profile
+      description: |
+        Removes a language from the user's profile.
       security:
         - bearerAuth: []
       parameters:
@@ -204,22 +265,26 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
         - name: language_id
           in: path
           required: true
           schema:
             type: integer
+            format: uint64
       responses:
         '200':
           description: Language removed successfully
         '400':
-          description: Invalid IDs
+          description: Invalid IDs or language not found
         '401':
-          description: Unauthorized or user ID mismatch
+          description: Unauthorized - token user_id does not match path user_id
 
   /users/{user_id}/hobbies:
     post:
       summary: Add hobby to user profile
+      description: |
+        Adds a hobby to the user's profile.
       security:
         - bearerAuth: []
       parameters:
@@ -228,6 +293,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
       requestBody:
         required: true
         content:
@@ -238,13 +304,15 @@ paths:
         '200':
           description: Hobby added successfully
         '400':
-          description: Invalid request data
+          description: Invalid request data or hobby already exists
         '401':
-          description: Unauthorized or user ID mismatch
+          description: Unauthorized - token user_id does not match path user_id
 
   /users/{user_id}/hobbies/{hobby_id}:
     delete:
       summary: Remove hobby from user profile
+      description: |
+        Removes a hobby from the user's profile.
       security:
         - bearerAuth: []
       parameters:
@@ -253,22 +321,27 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
         - name: hobby_id
           in: path
           required: true
           schema:
             type: integer
+            format: uint64
       responses:
         '200':
           description: Hobby removed successfully
         '400':
-          description: Invalid IDs
+          description: Invalid IDs or hobby not found
         '401':
-          description: Unauthorized or user ID mismatch
+          description: Unauthorized - token user_id does not match path user_id
 
   /chats:
     post:
       summary: Create a new chat
+      description: |
+        Creates a new chat. For "Direct" chats, also specify goal_id (the other user's ID).
+        The creator is automatically added as the first member.
       security:
         - bearerAuth: []
       requestBody:
@@ -287,6 +360,7 @@ paths:
                 properties:
                   chat_id:
                     type: integer
+                    format: uint64
         '400':
           description: Invalid chat data
         '401':
@@ -295,6 +369,9 @@ paths:
   /chats/{chat_id}/members/{user_id}:
     post:
       summary: Add user to chat
+      description: |
+        Adds an existing user to an existing chat. 
+        The authenticated user must be a member of the chat.
       security:
         - bearerAuth: []
       parameters:
@@ -303,26 +380,63 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
         - name: user_id
           in: path
           required: true
           schema:
             type: integer
+            format: uint64
       responses:
         '200':
           description: User added to chat successfully
         '400':
           description: Invalid chat or user ID
         '401':
+          description: Unauthorized - you are not a member of this chat
+        '403':
+          description: Forbidden - cannot add user to chat
+        '418':
+          description: Cannot add user to chat (chat created but member addition failed)
+
+  /chats/{chat_id}:
+    get:
+      summary: Get chat details
+      description: |
+        Returns details of a specific chat. 
+        For "Direct" chats, returns the other user's nickname and color.
+        User must be a member of the chat.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chat_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: uint64
+      responses:
+        '200':
+          description: Chat details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        '400':
+          description: Invalid chat ID
+        '401':
           description: Unauthorized
         '403':
-          description: User is not a member of the chat
-        '418':
-          description: Cannot add user to chat
+          description: User is not a member of this chat
+        '404':
+          description: Chat not found
 
   /languages:
     get:
       summary: Get list of available languages
+      description: |
+        Returns all languages available in the system.
+        Use language_id when adding languages to user profiles.
       responses:
         '200':
           description: List of languages
@@ -338,6 +452,9 @@ paths:
   /hobbies:
     get:
       summary: Get list of available hobbies
+      description: |
+        Returns all hobbies available in the system.
+        Use hobby_id when adding hobbies to user profiles.
       responses:
         '200':
           description: List of hobbies
@@ -353,6 +470,9 @@ paths:
   /users/{user_id}/chats:
     get:
       summary: Get user's chat list
+      description: |
+        Returns all chats the user is a member of.
+        The user_id must match the authenticated user's ID.
       security:
         - bearerAuth: []
       parameters:
@@ -361,6 +481,7 @@ paths:
           required: true
           schema:
             type: integer
+            format: uint64
       responses:
         '200':
           description: List of user's chats
@@ -373,50 +494,135 @@ paths:
         '400':
           description: Invalid user ID
         '401':
-          description: Unauthorized or user ID mismatch
-
-  /users/{user_id}/chats/{chat_id}:
-    get:
-      summary: Get specific chat details
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: chat_id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Chat details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Chat'
-        '400':
-          description: Invalid IDs
-        '401':
-          description: Unauthorized or user ID mismatch
-        '403':
-          description: User is not a member of this chat
+          description: Unauthorized - token user_id does not match path user_id
 
   /ws:
     get:
-      summary: Establish WebSocket connection
+      summary: Establish WebSocket connection for real-time messaging
+      description: |
+        ## WebSocket Connection
+        
+        Establishes a WebSocket connection for real-time chat messaging.
+        
+        ### Connection Details
+        - **Protocol**: WebSocket (ws:// or wss://)
+        - **Path**: `/ws`
+        - **Authentication**: JWT token via query parameter `access_token` or Authorization header
+        
+        ### Connection Example
+        ```
+        wss://95.165.132.221/api/ws?access_token=<jwt_token>
+        ```
+        Or with header:
+        ```
+        wss://95.165.132.221/api/ws
+        Header: Authorization: Bearer <jwt_token>
+        ```
+        
+        ### Message Types
+        
+        The WebSocket supports the following JSON message types:
+        
+        #### 1. Send Chat Message (`type: "chat"`)
+        Send a message to a chat.
+        
+        **Request:**
+        ```json
+        {
+          "type": "chat",
+          "chat_id": 123,
+          "content": "Hello, world!"
+        }
+        ```
+        
+        **Response (broadcast to all chat members):**
+        ```json
+        {
+          "chat_id": 123,
+          "user_id": 456,
+          "content": "Hello, world!",
+          "created_at": "2024-01-15T10:30:00Z",
+          "message_id": 789
+        }
+        ```
+        
+        #### 2. Receive Messages (`type: "recieve_messages"`)
+        Request message history for a chat.
+        
+        **Request:**
+        ```json
+        {
+          "type": "recieve_messages",
+          "chat_id": 123,
+          "from_message_id": 0,
+          "limit": 50
+        }
+        ```
+        
+        - `chat_id`: The chat to get messages from. Use 0 for all user's chats.
+        - `from_message_id`: Message ID to get messages older than. Use 0 for most recent.
+        - `limit`: Maximum number of messages to return (default 50).
+        
+        **Response (stream of messages):**
+        ```json
+        {
+          "chat_id": 123,
+          "user_id": 456,
+          "content": "Hello!",
+          "created_at": "2024-01-15T10:30:00Z",
+          "message_id": 789
+        }
+        ```
+        
+        #### 3. Ping/Pong (Keep-Alive)
+        The server automatically sends ping frames every 5 seconds.
+        You can also send manual ping/pong:
+        
+        **Client ping:**
+        ```json
+        {
+          "type": "ping"
+        }
+        ```
+        
+        **Server pong response:**
+        ```json
+        {
+          "type": "pong"
+        }
+        ```
+        
+        ### Connection Lifecycle
+        
+        1. **Connect**: Client initiates WebSocket connection with JWT
+        2. **Authenticate**: Server validates JWT and retrieves user info
+        3. **Read/Write Pumps**: 
+           - Read pump handles incoming messages
+           - Write pump handles outgoing messages and keep-alive pings
+        4. **Disconnect**: Connection closes, client unregistered
+        
+        ### Error Responses
+        
+        If authentication fails, the HTTP upgrade will fail:
+        - `400 Bad Request`: Cannot find user
+        - `401 Unauthorized`: Invalid or missing JWT token
+        
+        ### Implementation Notes
+        
+        - Server uses gorilla/websocket
+        - Ping/pong handled automatically (30-60 second timeouts)
+        - Messages are broadcast to all chat members
+        - Message history is stored in PostgreSQL
+        - Maximum broadcast channel buffer: 256 messages
       security:
         - bearerAuth: []
       responses:
         '101':
-          description: WebSocket connection established
+          description: WebSocket connection established (Switching Protocols)
         '400':
           description: Cannot find user
         '401':
-          description: Unauthorized
+          description: Unauthorized - invalid or missing JWT token
 
 components:
   schemas:
@@ -428,11 +634,13 @@ components:
       properties:
         username:
           type: string
-          description: User's username
+          description: User's username (unique)
+          example: john_doe
         password:
           type: string
-          description: User's password
+          description: User's password (minimum 2 characters)
           minLength: 2
+          example: secretpass
 
     RefreshRequest:
       type: object
@@ -441,65 +649,99 @@ components:
       properties:
         refresh_token:
           type: string
-          description: Refresh token
+          description: Refresh token obtained from login
+          example: eyJhbGciOiJFZERTQSJ9...
 
     UserFilter:
       type: object
       properties:
         user_id:
           type: integer
+          format: uint64
           description: Filter by specific user ID
         search_string:
           type: string
-          description: Search string for username/nickname/description
+          description: Search string for username/nickname/description (uses similarity matching)
+          example: john
         hobbies:
           type: array
           items:
             type: integer
-          description: Filter by hobby IDs
+            format: uint64
+          description: Filter by hobby IDs (users must have at least one)
+          example: [1, 2, 3]
         known_languages:
           type: array
           items:
             type: integer
-          description: Filter by known language IDs
+            format: uint64
+          description: Filter by known language IDs (users must know at least one)
+          example: [1, 2]
         learn_languages:
           type: array
           items:
             type: integer
-          description: Filter by learning language IDs
+            format: uint64
+          description: Filter by learning language IDs (users must be learning at least one)
+          example: [3, 4]
         page_size:
           type: integer
-          description: Number of items per page
+          description: Number of items per page (max 1000)
           maximum: 1000
+          default: 50
+          example: 50
         page_number:
           type: integer
-          description: Page number
+          description: Page number (1-indexed)
+          minimum: 1
+          default: 1
+          example: 1
 
     UserWithDetails:
       type: object
       properties:
         user_id:
           type: integer
+          format: uint64
+          description: Unique user identifier
+          example: 123
         username:
           type: string
+          description: User's unique username
+          example: john_doe
         nickname:
           type: string
+          description: User's display name
+          example: John
         color:
           type: string
+          description: User's preferred color (hex format)
+          example: "#FF5733"
         description:
           type: string
+          description: User's bio/description
+          example: Language enthusiast from NYC
         hobby_title_ids:
           type: array
           items:
             type: integer
+            format: uint64
+          description: List of hobby IDs the user has
+          example: [1, 2, 3]
         known_language_ids:
           type: array
           items:
             type: integer
+            format: uint64
+          description: List of language IDs the user knows
+          example: [1, 2]
         learn_language_ids:
           type: array
           items:
             type: integer
+            format: uint64
+          description: List of language IDs the user is learning
+          example: [3, 4]
 
     UpdateUserRequest:
       type: object
@@ -507,36 +749,40 @@ components:
         description:
           type: string
           description: User's bio/description
+          example: Updated bio
         password:
           type: string
-          description: New password (optional, min 2 characters)
+          description: New password (optional, min 2 characters, empty string = no change)
           minLength: 2
+          example: newpassword123
         nickname:
           type: string
-          description: User's nickname
+          description: User's nickname/display name
+          example: NewNickname
         color:
           type: string
-          description: User's color preference
+          description: User's color preference (hex format)
+          example: "#3498DB"
         add_hobbies:
           type: array
           items:
             $ref: '#/components/schemas/UserHobby'
-          description: Hobbies to add
+          description: Hobbies to add to user profile
         delete_hobbies:
           type: array
           items:
             $ref: '#/components/schemas/UserHobby'
-          description: Hobbies to remove
+          description: Hobbies to remove from user profile
         add_languages:
           type: array
           items:
             $ref: '#/components/schemas/UserLanguage'
-          description: Languages to add
+          description: Languages to add to user profile
         delete_languages:
           type: array
           items:
             $ref: '#/components/schemas/UserLanguage'
-          description: Languages to remove
+          description: Languages to remove from user profile
 
     UserLanguage:
       type: object
@@ -546,9 +792,13 @@ components:
       properties:
         language_id:
           type: integer
+          format: uint64
+          description: Reference to language from /languages endpoint
+          example: 1
         is_known:
           type: boolean
           description: true for known language, false for learning language
+          example: true
 
     UserHobby:
       type: object
@@ -557,46 +807,97 @@ components:
       properties:
         hobby_id:
           type: integer
+          format: uint64
+          description: Reference to hobby from /hobbies endpoint
+          example: 1
 
     Chat:
       type: object
       required:
         - title
       properties:
+        chat_id:
+          type: integer
+          format: uint64
+          description: Unique chat identifier (returned on create)
+          example: 123
         title:
           type: string
-          description: Chat title
+          description: Chat title/name
+          example: English Learners Group
         type:
           type: string
-          description: Chat type
+          description: Chat type - "Group" for group chats, "Direct" for direct messages
+          enum:
+            - Group
+            - Direct
+          example: Group
         member_ids:
           type: array
           items:
             type: integer
+            format: uint64
           description: Array of member user IDs
+          example: [1, 2, 3]
+        color:
+          type: string
+          description: For Direct chats, the other user's color
+          example: "#FF5733"
+        goal_id:
+          type: integer
+          format: uint64
+          description: For Direct chats, the other user's ID (used when creating)
+          example: 456
 
     Language:
       type: object
       properties:
         language_id:
           type: integer
+          format: uint64
+          example: 1
         name:
           type: string
+          example: English
 
     Hobby:
       type: object
       properties:
         hobby_id:
           type: integer
+          format: uint64
+          example: 1
         title:
           type: string
+          example: Reading
+
+    MessagesRequest:
+      type: object
+      description: Request for retrieving message history via WebSocket
+      properties:
+        chat_id:
+          type: integer
+          format: uint64
+          description: Chat ID to get messages from, or 0 for all chats
+          example: 123
+        from_message_id:
+          type: integer
+          format: uint64
+          description: Get messages older than this ID, 0 = most recent
+          example: 0
+        limit:
+          type: integer
+          format: uint64
+          description: Maximum messages to return
+          default: 50
+          example: 50
 
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token obtained from login/refresh endpoints
+      description: JWT token obtained from login/refresh endpoints. Use "Bearer <token>" in Authorization header, or access_token query parameter for WebSocket.
 
 security:
   - bearerAuth: []

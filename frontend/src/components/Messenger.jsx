@@ -15,7 +15,7 @@ const Messenger = () => {
     useEffect(() => {
     const fetchData = async () => {
       try {
-        const chatRes = api.get(`/user/${user_id}/chats`)
+        const chatRes = api.get(`/users/${user_id}/chats`)
 
         if (chatRes.status === 'fulfilled') {
           setChats(chatRes.value.data);

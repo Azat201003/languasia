@@ -402,10 +402,8 @@ func getChatList(c *echo.Context) error {
 	chats, err := database.DBC.MyChats(userId)
 	for i := range chats {
 		if chats[i].Type == "Direct" {
-			title, err := getDirectChatTitle(userId, chats[i].ChatId)
-			if err == nil {
-				chats[i].Title = title
-			}
+			_ = completeDirectChat(userId, &chats[i])
+			
 			if len(chats[i].MemberIds) > 2 {
 				chats[i].MemberIds = chats[i].MemberIds[0:2]
 			}
@@ -417,13 +415,13 @@ func getChatList(c *echo.Context) error {
 	return c.JSON(http.StatusOK, chats)
 }
 
-func getDirectChatTitle(myUserId, chatId uint64) (string, error) {
-	memberIds, err := database.DBC.GetChatMembers(chatId)
+func completeDirectChat(myUserId uint64, chat *database.Chat) error {
+	memberIds, err := database.DBC.GetChatMembers(chat.ChatId)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if len(memberIds) < 2 {
-		return "", errors.New("...")
+		return errors.New("...")
 	}
 	fmt.Println("Member ids: ", memberIds)
 	var memberId uint64
@@ -434,13 +432,15 @@ func getDirectChatTitle(myUserId, chatId uint64) (string, error) {
 	}
 	members, err := database.DBC.RecieveFilteredUsers(&database.UserFilter{UserId: memberId})
 	if err != nil {
-		return "", err
+		return err
 	}
 	if len(members) == 0 {
-		return "", errors.New("...")
+		return errors.New("...")
 	}
+	chat.Color = members[0].Color
+	chat.Title = members[0].Nickname
 	fmt.Println("Member: ", members[0])
-	return members[0].Nickname, nil 
+	return nil 
 }
 
 func getChat(c *echo.Context) error {	
@@ -464,11 +464,7 @@ func getChat(c *echo.Context) error {
 	}
 
 	if chat.Type == "Direct" {
-		title, err := getDirectChatTitle(userId, chat.ChatId)
-		if err == nil {
-			chat.Title = title
-		}	
-		fmt.Println("title: ", title)
+		_ = completeDirectChat(userId, chat)
 	}
 
 	var memberIds []int64

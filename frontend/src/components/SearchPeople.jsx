@@ -104,6 +104,14 @@ const SearchPeople = () => {
     fetchData();
   }, []);
 
+  const createChat = async (goalId) => {
+    api.post("/chats", {
+        "title": "doesn't matter",
+        "goal_id": goalId,
+        "type": "Direct"
+    })
+  }
+
   // Helper: get language name by ID
   const getLanguageName = (id) => {
     const lang = languages.find(l => l.language_id === id);
@@ -307,7 +315,9 @@ const SearchPeople = () => {
                   )}
                 </div>
                 <div className="chat-status"> </div>
-                <button>Create chat</button>
+                <button className="chat-create-btn" onClick={() => {
+                    createChat(user.user_id);
+                }}>Create chat</button>
               </div>
             ))}
           </div>

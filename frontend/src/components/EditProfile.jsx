@@ -131,10 +131,12 @@ const EditProfile = ({
     fetchData();
   }, []);
 
-  const addItem = (value, setter, inputSetter) => {
+  const addItem = (value, setter, inputSetter, all, key) => {
     if (value.trim()) {
-      setter(prev => [...prev, value.trim()]);
-      inputSetter('');
+      if (all.map(el => el[key]).includes(value)) {
+          setter(prev => [...prev, value.trim()]);
+          inputSetter('');
+      }
     }
   };
 
@@ -278,7 +280,7 @@ const EditProfile = ({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
-                          addItem(newHobby, setHobbies, setNewHobby);
+                          addItem(newHobby, setHobbies, setNewHobby, allHobbies, "title");
                         }
                       }}
                       placeholder="Add hobby..."
@@ -286,7 +288,7 @@ const EditProfile = ({
                     />
                     <button
                       type="button"
-                      onClick={() => addItem(newHobby, setHobbies, setNewHobby)}
+                      onClick={() => addItem(newHobby, setHobbies, setNewHobby, allHobbies, "title")}
                       className="chip-add-btn"
                     >
                       <img src={Settings} className="settings-icon" alt="add" />
@@ -309,7 +311,7 @@ const EditProfile = ({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
-                          addItem(newKnownLang, setKnownLanguages, setNewKnownLang);
+                          addItem(newKnownLang, setKnownLanguages, setNewKnownLang, allLanguages, "name");
                         }
                       }}
                       placeholder="Enter language..."
@@ -317,7 +319,7 @@ const EditProfile = ({
                     />
                     <button
                       type="button"
-                      onClick={() => addItem(newKnownLang, setKnownLanguages, setNewKnownLang)}
+                      onClick={() => addItem(newKnownLang, setKnownLanguages, setNewKnownLang, allLanguages, "name")}
                       className="chip-add-btn"
                     >
                       <img src={Settings} className="settings-icon" alt="add" />
@@ -340,7 +342,7 @@ const EditProfile = ({
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
-                          addItem(newLearnLang, setLearnLanguages, setNewLearnLang);
+                          addItem(newLearnLang, setLearnLanguages, setNewLearnLang, allLanguages, "name");
                         }
                       }}
                       placeholder="Add language..."
@@ -348,7 +350,7 @@ const EditProfile = ({
                     />
                     <button
                       type="button"
-                      onClick={() => addItem(newLearnLang, setLearnLanguages, setNewLearnLang)}
+                      onClick={() => addItem(newLearnLang, setLearnLanguages, setNewLearnLang, allLanguages, "name")}
                       className="chip-add-btn"
                     >
                       <img src={Settings} className="settings-icon" alt="add" />

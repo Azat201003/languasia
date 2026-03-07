@@ -299,3 +299,8 @@
 .chip-add-btn:hover .settings-icon {
   transform: rotate(180deg);
 }
+
+button {
+  cursor: pointer;
+}
+

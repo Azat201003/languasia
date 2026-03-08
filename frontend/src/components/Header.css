@@ -18,6 +18,10 @@
   margin: 0;
 }
 
+.logo:hover {
+  cursor: pointer;
+}
+
 .profile-btn {
   width: 42px;
   height: 42px;
@@ -46,6 +50,12 @@ a {
   padding-right: 13px;
   align-items: center;
   margin-top: 0px;
+  color: #b3b3b3;
+}
+
+.nickname:hover {
+  cursor: pointer;
+  color: #dadada;
 }
 
 .profile-container {

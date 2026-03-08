@@ -25,27 +25,23 @@ const Header = () => {
     fetchUserColor();
 
   }, [api_url, user_id]);
-  
-  const onProfile = async (e) => {
-    navigate("/my");
-  }
 
   const profileStyle = {backgroundColor: color}
 
   return (
     <>
       <header className="top-header">
-        <img src={Logo} alt="Logo" className="logo" />
+        <a href="/"> <img src={Logo} alt="Logo" className="logo" /> </a>
 	<a href="/">Messenger</a>
         <a href="/search">Search People</a>
         <div className="profile-container">
-          <div className="nickname">{ nickname }</div>
-          <button style={profileStyle} className="profile-btn" aria-label="Профиль" onClick={onProfile} />
+          <a href="/my" className="nickname">{ nickname }</a>
+          <a href="/my"> <button style={profileStyle} className="profile-btn" aria-label="Профиль" /> </a>
         </div>
       </header>
     </>
   );
 };
 
-export default Header;
+export {Header};
 

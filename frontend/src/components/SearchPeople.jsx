@@ -152,7 +152,7 @@ const SearchPeople = () => {
 
     if (user.learn_language_ids && user.learn_language_ids.length > 0) {
       const langNames = user.learn_language_ids.map(id => getLanguageName(id)).join(', ');
-      parts.push(`Learnt languages: ${langNames}`);
+      parts.push(`Learning languages: ${langNames}`);
     }
 
     return parts.join(' • ');

@@ -60,20 +60,7 @@ const EditProfile = ({
     navigate("/");
     window.location.reload();
   }
-  
-    useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUserId = localStorage.getItem('user_id');
-
-    if (!token || !storedUserId) {
-      setError('Authentication required. Please log in.');
-      setLoading(false);
-      return;
-    }
-
-    setUserId(parseInt(storedUserId));
-
-    const fetchData = async () => {
+  const fetchData = async () => {
       try {
         // Fetch current user
         const userRes = await api.get('/my');
@@ -126,7 +113,20 @@ const EditProfile = ({
       } finally {
         setLoading(false);
       }
-    };
+  };
+  
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUserId = localStorage.getItem('user_id');
+
+    if (!token || !storedUserId) {
+      setError('Authentication required. Please log in.');
+      setLoading(false);
+      return;
+    }
+
+    setUserId(parseInt(storedUserId));
+
 
     fetchData();
   }, []);
@@ -196,6 +196,7 @@ const EditProfile = ({
         payload,
       );
 
+      fetchData();
       if (onSave) onSave();
   };
 
@@ -291,7 +292,7 @@ const EditProfile = ({
                       onClick={() => addItem(newHobby, setHobbies, setNewHobby, allHobbies, "title")}
                       className="chip-add-btn"
                     >
-                      <img src={Settings} className="settings-icon" alt="add" />
+                    +
                     </button>
                   </div>
                   <div className="chips">{renderRemovableChips(hobbies, setHobbies)}</div>
@@ -322,7 +323,7 @@ const EditProfile = ({
                       onClick={() => addItem(newKnownLang, setKnownLanguages, setNewKnownLang, allLanguages, "name")}
                       className="chip-add-btn"
                     >
-                      <img src={Settings} className="settings-icon" alt="add" />
+                    +
                     </button>
                   </div>
                   <div className="chips">{renderRemovableChips(knownLanguages, setKnownLanguages)}</div>
@@ -353,7 +354,7 @@ const EditProfile = ({
                       onClick={() => addItem(newLearnLang, setLearnLanguages, setNewLearnLang, allLanguages, "name")}
                       className="chip-add-btn"
                     >
-                      <img src={Settings} className="settings-icon" alt="add" />
+                    +
                     </button>
                   </div>
                   <div className="chips">{renderRemovableChips(learnLanguages, setLearnLanguages, true)}</div>

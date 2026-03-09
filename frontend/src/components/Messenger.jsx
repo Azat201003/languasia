@@ -1,48 +1,197 @@
-import React, { useState, useEffect } from 'react';
-import { api } from "../api.jsx";
+import React, { useState, useEffect, useRef } from 'react';
 import './Messenger.css';
 import Logo from '../assets/Logo.svg';
 import sendSymbol from '../assets/sendSymbol.svg';
-import Header from './Header'
+import api from '../api.jsx';
+import {Header} from './Header.jsx';
+
+import styled from 'styled-components';
+import SimpleBar from 'simplebar-react';
+import 'simplebar-react/dist/simplebar.min.css';
+
+const api_url = import.meta.env.VITE_API_URL;
+const ws_url = import.meta.env.VITE_WS_URL;
+
+const Scroll = styled(SimpleBar)`
+  .simplebar-track.simplebar-vertical {
+    background-color: #00000000;
+    pointer-events: auto;
+    z-index: 2;
+  }
+  .simplebar-scrollbar::before {
+    background-color: #5e5e5e !important;
+    transition: opacity 0.8s !important;
+  }
+`;
+
+
+function ChatList({ userid, activeChat, setActiveChat, setMessages, searchQuery }) {
+
+  const [chats, setChats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+
+    const loadChats = async () => {
+        setLoading(true);
+        setError(null);
+
+        const response = await api.get(api_url + `/users/${userid}/chats`);
+
+        const rawChats = await response.data;
+
+        console.log(rawChats);
+
+        setChats(rawChats);
+
+        // setChats(response.data);
+
+        setLoading(false);
+    }
+    loadChats()
+  }, [userid]);
+
+  if (loading) return <div className="chats-status">Loading chats...</div>;
+  if (error)   return <div className="chats-status">Error: {error}</div>;
+
+  const filteredChats = chats.filter(chat =>
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+   <>
+    {filteredChats.length === 0 ? (
+      <p className="chats-status">You have no chats</p>
+    ) : (filteredChats.map((chat, index) => (
+      <div key={index} className={`chat-item ${activeChat?.chat_id == chat.chat_id ? "active" : ""}`} onClick={() => (setActiveChat(chat))}>
+        <div className="chat-avatar" style={{backgroundColor: chat.color}}/>
+        <div className="chat-info">
+          <div className="chat-name">{chat.title}</div>
+          <div className="chat-preview"></div>
+        </div>
+        <div className="chat-time"></div>
+      </div>)))}
+    </>
+  );
+}
+
 
 const Messenger = () => {
 
-  const user_id = localStorage.getItem('user_id');
+  const [activeChat, setActiveChat] = useState(null);
+
+  const [message, setMessage] = useState('');
+
+  const [messages, setMessages] = useState([]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const user_id = parseInt(localStorage.getItem('user_id'));
   const token = localStorage.getItem('token');
- 
-  const [chats, setChats] = useState([]);
-  
-    useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const chatRes = api.get(`/users/${user_id}/chats`)
 
-        if (chatRes.status === 'fulfilled') {
-          setChats(chatRes.value.data);
-        } else {
-          console.warn('Chatss endpoint not available – chats will be limited');
+  
+
+  // const websocket = useRef(new WebSocket(`${ws_url}/ws` + `?access_token=${token}`));
+  const websocket = useRef(null);
+
+  useEffect(() => {
+    const ws = new WebSocket(`${ws_url}/ws?access_token=${token}`);
+  
+    websocket.current = ws;
+
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      const pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
         }
-      } catch (err) {
-        console.error('Unexpected error', err);
-      }
+      }, 5000);
     };
-    fetchData();
-    console.log(chats);
-  }, []);
 
-  const api_url = import.meta.env.VITE_API_URL;
-  
-  const onWebsocketConnect = async (e) => {
-    const response = await fetch(api_url + `/ws?access_token=${token}`, {
-      method: 'GET',
-    });
+    websocket.current.onmessage = (event) => {
+      if (event.data.chat_id && event.data.chat_id !== activeChat?.chat_id) return;
+
+      const newMessage = JSON.parse(event.data);
+
+      if (newMessage.type != "pong") {
+        setMessages(prev => [newMessage, ...prev].sort((a, b) => a.message_id - b.message_id));
+      }
+    }
+
+    return () => {
+      ws.close();
+    };
+  }, [token]);
+
+
+  const onPing = async (e) => {
+    const message = {
+      type: "ping",
+    };
+    setTimeout(() => {websocket.current.send(JSON.stringify(message))}, 2000);
   }
+
+  const onMessageSend = async(e, chatId) => {
+    const websocketMessage = {
+      type: "chat",
+      chat_id: chatId,
+      content: message
+    };
+    websocket.current.send(JSON.stringify(websocketMessage));
+    setMessage('');
+  }
+
+
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      onMessageSend(e, activeChat.chat_id);
+    }
+  };
+
+  const loadChat = async(chatId) => {
+    const loadChatMessage = {
+      type: "recieve_messages",
+      chat_id: chatId,
+      from_message_id: 0,
+      limit: 50
+    };
+    websocket.current.send(JSON.stringify(loadChatMessage));
+  }
+
+  // console.log(setTimeout((e) => loadChat(e, 6), 2000));
+
+  useEffect(() => {
+    if (activeChat) {
+      setMessages([]);
+
+      console.log("some", messages);
+
+      loadChat(activeChat.chat_id);
+
+    }
+  }, [activeChat]);
+
+  
+  const bottomRef = useRef(null);
+
+  const scrollToBottom = () => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   return (
   <>
     {/* Верхняя панель */}
-    <Header />
+    <Header/>
     {/* Основной контент */}
+
+    
+    
     <div className="main-content">
       {/* Левая панель: список чатов */}
       <aside className="chats-sidebar">
@@ -51,96 +200,66 @@ const Messenger = () => {
             type="text"
             className="search-input"
             placeholder="Поиск по чатам"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <Scroll 
+          style={{ maxHeight: '100%', flex: 1, overflowY: 'auto' }}
+        >
         <div className="chats-list">
-          <div className="chat-item active">
-            <div
-              className="chat-avatar"
-            />
-            <div className="chat-info">
-              <div className="chat-name">Alex K.</div>
-              <div className="chat-preview">Ok, let's on 19:00</div>
-            </div>
-            <div className="chat-time">14:32</div>
-          </div>
-
-          <div className="chat-item">
-            <div
-              className="chat-avatar"
-            />
-            <div className="chat-info">
-              <div className="chat-name">Project team</div>
-              <div className="chat-preview">Mary: don't forget about meating</div>
-            </div>
-            <div className="chat-time">12:05</div>
-          </div>
-
-          <div className="chat-item">
-            <div
-              className="chat-avatar"
-            />
-            <div className="chat-info">
-              <div className="chat-name">Friends</div>
-              <div className="chat-preview">You: Gestern Foto</div>
-            </div>
-            <div className="chat-time">yesterday</div>
-          </div>
-
-          {/* Дополнительные чаты добавляйте здесь */}
+          <ChatList userid={user_id} activeChat={activeChat} setActiveChat={setActiveChat} setMessages={setMessages} searchQuery={searchQuery}/>
         </div>
+        </Scroll>
       </aside>
 
       {/* Правая панель: переписка */}
+    {activeChat != null && (
       <main className="chat-area">
+        
         <div className="chat-header">
           <div
             className="chat-avatar"
+            style={{ backgroundColor: activeChat.color }}
           />
-          <div className="chat-name">Alex K.</div>
+          <div className="chat-name">{activeChat.title}</div>
         </div>
+
+        <Scroll 
+          style={{ maxHeight: '100%', flex: 1, overflowY: 'auto' }}
+        >
 
         <div className="messages">
-          <div className="message received">
-            Hi! How are you?
-            <div className="message-time">14:20</div>
-          </div>
 
-          <div className="message sent">
-            Ok, thanks! And you?
-            <div className="message-time">14:21</div>
-          </div>
-
-          <div className="message received">
-            Ok too. Will we meet tomorrow?
-            <div className="message-time">14:25</div>
-          </div>
-
-          <div className="message sent">
-            Yeah, let'\''s at 19:00
-            <div className="message-time">14:32</div>
-          </div>
-
-          {/* Дополнительные сообщения добавляйте здесь */}
+          {messages.map((msg, index) => (<div className={`message ${msg.user_id != user_id ? 'received' : 'sent'}`} key={msg.message_id}> {msg.content} </div>))}
+          
+          <div ref={bottomRef} />
         </div>
+
+        </Scroll>
 
         <div className="message-input-wrapper">
           <input
             type="text"
+            value={message}
             className="message-input"
-            placeholder="Write message..."
+            placeholder="Write a message..."
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
-          <button className="send-btn" aria-label="Отправить"  onClick={onWebsocketConnect}>
+          <button className="send-btn" aria-label="Отправить"  onClick={(e) => onMessageSend(e, activeChat.chat_id)}>
             <img 
               src={sendSymbol} 
               className="send-symbol"
             />
           </button>
+
         </div>
       </main>
+        )}
     </div>
   </>
 );
 };
 
-export default Messenger;
+export {Messenger};

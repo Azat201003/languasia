@@ -11,6 +11,9 @@ const SearchPeople = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Direct chats and user ids of users who has them with me
+  const [existingChatUserIds, setExistingChatUserIds] = useState([]);
+
   // Selected IDs for each filter category
   const [selectedHobbyIds, setSelectedHobbyIds] = useState([]);
   const [selectedKnownLangIds, setSelectedKnownLangIds] = useState([]);
@@ -24,13 +27,13 @@ const SearchPeople = () => {
   // Free‑text search string
   const [searchString, setSearchString] = useState('');
 
-  // Fetch languages and hobbies on mount
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       try {
-        const [langRes, hobbyRes] = await Promise.allSettled([
+        const userId = localStorage.getItem('user_id')
+        const [langRes, hobbyRes, chatRes] = await Promise.allSettled([
           api.get('/languages'),
-          api.get('/hobbies')
+          api.get('/hobbies'),
+          api.get(`/users/${userId}/chats`)
         ]);
 
         if (langRes.status === 'fulfilled') {
@@ -45,10 +48,19 @@ const SearchPeople = () => {
         } else {
           console.warn('Hobbies endpoint not available – hobby filtering will be limited');
         }
+        
+        if (chatRes.status === 'fulfilled') {
+          setExistingChatUserIds(chatRes.value.data.map(chat => chat.goal_id))
+          console.log(existingChatUserIds)
+        } else {
+          console.warn('Hobbies endpoint not available – hobby filtering will be limited');
+        }
       } catch (err) {
         console.error('Unexpected error', err);
       }
-    };
+   };
+  // Fetch languages and hobbies on mount
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -58,6 +70,7 @@ const SearchPeople = () => {
       goal_id: goalId,
       type: "Direct"
     });
+    fetchData(); 
   };
 
   // Helper: get language name by ID
@@ -350,9 +363,13 @@ const SearchPeople = () => {
                       )}
                     </div>
                     <div className="chat-status"> </div>
-                    <button className="chat-create-btn" onClick={() => createChat(user.user_id)}>
-                      Create chat
-                    </button>
+                  {
+                    !existingChatUserIds.includes(user.user_id) && (
+                        <button className="chat-create-btn" id={`chat-create-${user.user_id}`} onClick={() => createChat(user.user_id)}>
+                          Create chat
+                        </button>
+                    )
+                  }
                   </div>
                 ))}
             </div>

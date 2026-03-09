@@ -83,19 +83,14 @@ func (h *WebSocketHub) Run() {
 		case client := <-h.unregister:
 			fmt.Printf("[HUB] Unregistering client: %v (username: %s)\n", client, client.user.Username)
 			h.mutex.Lock()
-			if h.clients[client.clientId] != nil {
-				h.clients[client.clientId] = nil
-				client.mu.Lock()
-				if !client.closed {
+			delete(h.clients, client.clientId) // remove from map
+			client.mu.Lock()
+			if !client.closed {
 					client.closed = true
-					close(client.send)
-				}
-				client.mu.Unlock()
-				fmt.Printf("[HUB] Client unregistered. Total clients: %d\n", len(h.clients))
-			} else {
-				fmt.Printf("[HUB] Client not found during unregister: %v\n", client)
+					close(client.send) // unblock writePump
 			}
-            delete(h.clients, client.clientId)
+			client.mu.Unlock()
+			fmt.Printf("[HUB] Client unregistered. Total clients: %d\n", len(h.clients))
 			h.mutex.Unlock()
 
 		case broadcast := <-h.broadcast:
@@ -104,7 +99,7 @@ func (h *WebSocketHub) Run() {
 			var clientIds []uint64
 			var containsUser bool
 			if broadcast.ChatId == 0 {
-				for clientId, _ := range h.clients {
+				for clientId := range h.clients {
 					clientIds = append(clientIds, clientId)
 				}
 				containsUser = true
@@ -168,7 +163,6 @@ func (h *WebSocketHub) Run() {
 					fmt.Printf("[HUB] Message sent to client %s\n", client.user.Username)
 				default:
 					fmt.Printf("[HUB] Client %s send channel full or closed, marking for removal\n", client.user.Username)
-					client.closed = true
 					h.unregister <- client
 				}
 				client.mu.Unlock()

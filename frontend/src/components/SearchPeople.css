@@ -112,6 +112,7 @@ body {
   background-color: #111111;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .results-header {
   height: 9vh;

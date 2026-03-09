@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './SearchPeople.css';
 import { api } from "../api.jsx";
 import Header from './Header';
+import Scroll from "./Scroll"
 
 const SearchPeople = () => {
   const [users, setUsers] = useState([]);
@@ -322,36 +323,40 @@ const SearchPeople = () => {
 
         <div className="results-area">
           <div className="results-header">Search result</div>
-          <div className="results-list">
-            {loading && <div className="no-results">Loading...</div>}
-            {error && <div className="no-results">Error: {error}</div>}
-            {!loading && !error && users.length === 0 && (
-              <div className="no-results">Nothing found</div>
-            )}
-            {!loading && !error && users.map((user) => (
-              <div key={user.user_id} className="chat-item">
-                <div
-                  className="chat-avatar"
-                  style={{ backgroundColor: user.color || '#333' }}
-                />
-                <div className="chat-info">
-                  <div className="chat-name">
-                    {user.nickname || user.username || 'User'}
-                  </div>
-                  <div className="chat-preview">{formatPreview(user)}</div>
-                  {user.description && (
-                    <div className="chat-preview" style={{ marginTop: 4 }}>
-                      {user.description}
+          <Scroll
+            style={{ maxHeight: '100%', flex: 1, overflowY: 'auto' }}
+          >
+              <div className="results-list">
+                {loading && <div className="no-results">Loading...</div>}
+                {error && <div className="no-results">Error: {error}</div>}
+                {!loading && !error && users.length === 0 && (
+                  <div className="no-results">Nothing found</div>
+                )}
+                {!loading && !error && users.map((user) => (
+                  <div key={user.user_id} className="chat-item">
+                    <div
+                      className="chat-avatar"
+                      style={{ backgroundColor: user.color || '#333' }}
+                    />
+                    <div className="chat-info">
+                      <div className="chat-name">
+                        {user.nickname || user.username || 'User'}
+                      </div>
+                      <div className="chat-preview">{formatPreview(user)}</div>
+                      {user.description && (
+                        <div className="chat-preview" style={{ marginTop: 4 }}>
+                          {user.description}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="chat-status"> </div>
-                <button className="chat-create-btn" onClick={() => createChat(user.user_id)}>
-                  Create chat
-                </button>
-              </div>
-            ))}
-          </div>
+                    <div className="chat-status"> </div>
+                    <button className="chat-create-btn" onClick={() => createChat(user.user_id)}>
+                      Create chat
+                    </button>
+                  </div>
+                ))}
+            </div>
+        </Scroll>
         </div>
       </div>
     </>

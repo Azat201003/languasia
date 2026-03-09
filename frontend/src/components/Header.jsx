@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import Logo from '../assets/Logo.svg';
 import "./Header.css";
 import api from "../api.jsx";
+import UserIcon from "./UserIcon.jsx"
 import { redirect, useNavigate } from "react-router-dom";
 
 const Header = () => {
@@ -26,22 +27,20 @@ const Header = () => {
 
   }, [api_url, user_id]);
 
-  const profileStyle = {backgroundColor: color}
-
   return (
     <>
       <header className="top-header">
-        <a href="/"> <img src={Logo} alt="Logo" className="logo" /> </a>
-	<a href="/">Messenger</a>
+	  <a href="/"> <img src={Logo} alt="Logo" className="logo" /> </a>
+      <a href="/">Messenger</a>
         <a href="/search">Search People</a>
         <div className="profile-container">
           <a href="/my" className="nickname">{ nickname }</a>
-          <a href="/my"> <button style={profileStyle} className="profile-btn" aria-label="Профиль" /> </a>
+          <a href="/my"> <UserIcon color={color} /> </a>
         </div>
       </header>
     </>
   );
 };
 
-export {Header};
+export default Header;
 

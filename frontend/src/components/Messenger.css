@@ -19,6 +19,7 @@ body {
 }
 
 /* Верхняя панель */
+
 /* Основной контент */
 .main-content {
   flex: 1;
@@ -28,6 +29,10 @@ body {
 }
 
 /* Левая панель — список чатов */
+.chats-status {
+  justify-self: center;
+}
+
 .chats-sidebar {
   width: 380px;
   background-color: #181818;
@@ -48,8 +53,8 @@ body {
   align-items: center;
   padding: 12px 20px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  border-bottom: 1px solid #222;
+  transition: background-color 0.3s;
+  // border-bottom: 1px solid #222;
 }
 
 .chat-item:hover,
@@ -58,8 +63,9 @@ body {
 }
 
 .chat-item.active {
-  background-color: #40B26E20;
-  border-left: 3px solid #40B26E;
+  background-color: #347b4269;
+  // background-color: #40B26E20;
+  // border-left: 3px solid #40B26E;
 }
 
 .chat-avatar {
@@ -108,7 +114,8 @@ body {
   background-color: #111111;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* критично */
+  min-width: 0; /* критично */
+  min-height: 0;
 }
 
 .chat-header {
@@ -133,6 +140,10 @@ body {
   color: #ffffff;
 }
 
+.message:first-child {
+  margin-top: auto;
+}
+
 .messages {
   flex: 1;
   padding: 20px;
@@ -141,7 +152,7 @@ body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;               /* обязательно */
-  justify-content: flex-end;   /* сообщения прижаты к низу */
+  // justify-content: flex-end;   /* сообщения прижаты к низу */
 }
 
 .message {

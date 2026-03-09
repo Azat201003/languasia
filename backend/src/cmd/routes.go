@@ -439,6 +439,7 @@ func completeDirectChat(myUserId uint64, chat *database.Chat) error {
 	}
 	chat.Color = members[0].Color
 	chat.Title = members[0].Nickname
+	chat.GoalId = members[0].UserId
 	fmt.Println("Member: ", members[0])
 	return nil 
 }

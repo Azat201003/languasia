@@ -222,9 +222,6 @@ const EditProfile = ({
     ));
   };
 
-  if (loading) return <div className="profile-background">Loading...</div>;
-  if (error) return <div className="profile-background">Error: {error}</div>;
-
   return (
     <>
       <Header />

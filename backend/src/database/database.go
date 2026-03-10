@@ -228,13 +228,26 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 			AND u.user_id = %v
 		`, filter.UserId)
 	}
+	
+	query += `
+		)
+	`
+
+	if len(filter.SearchString) > 0 {
+		query += `
+			WHERE (
+				COALESCE(sml1,0) > 0.2 OR
+				COALESCE(sml2,0) > 0.2 OR
+				COALESCE(sml3,0) > 0.07
+			)
+		`
+	}
 
 	// Add ORDER BY with sum of matching counts
 	query += fmt.Sprintf(`
-		)
 		ORDER BY 
-			(matched_hobbies_count + matched_known_languages_count + matched_learn_languages_count) DESC,
 			2*sml1 + COALESCE(sml2,0) + COALESCE(sml3,0) DESC, 
+			(matched_hobbies_count + matched_known_languages_count + matched_learn_languages_count) DESC,
 			user_id ASC
 		OFFSET %v*%v
 		LIMIT %v

@@ -92,6 +92,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-left: 15px;
 }
 
 .chat-preview {

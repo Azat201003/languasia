@@ -2,7 +2,7 @@ import React from 'react';
 import "./UserIcon.css";
 import UserLogoFilter from "../assets/UserLogoFilter.svg";
 
-function UserIcon({ color }) {
+function UserIcon({ color, size=42 }) {
   console.log(UserLogoFilter)
   const coloredStyle = {
     backgroundColor: color,
@@ -12,13 +12,19 @@ function UserIcon({ color }) {
     WebkitMaskSize: "contain",
     maskRepeat: "no-repeat",
     WebkitMaskRepeat: "no-repeat",
-    width: "42px",
-    height: "42px",
+    filter: "brightness(70%)",
+    width: `${size}px`,
+    height: `${size}px`,
     border: "none"           // remove default button border
+  };
+  const backgroundStyles = {
+    width: `${size}px`,
+    height: `${size}px`,
+    backgroundColor: color,
   };
 
   return (
-    <div class="profile-btn-bg">
+    <div class="profile-btn-bg" style={backgroundStyles}>
         <button
           style={coloredStyle}
           className="profile-btn"

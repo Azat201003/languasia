@@ -2,15 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import './Messenger.css';
 import Logo from '../assets/Logo.svg';
 import sendSymbol from '../assets/sendSymbol.svg';
-import api from '../api.jsx';
-import {Header} from './Header.jsx';
+import {api, baseURL, wsURL} from '../api';
+import Header from './Header';
+import UserIcon from './UserIcon'
 
 import styled from 'styled-components';
 import SimpleBar from 'simplebar-react';
 import 'simplebar-react/dist/simplebar.min.css';
 
-const api_url = import.meta.env.VITE_API_URL;
-const ws_url = import.meta.env.VITE_WS_URL;
+const api_url = baseURL;
+const ws_url = wsURL;
 
 const Scroll = styled(SimpleBar)`
   .simplebar-track.simplebar-vertical {
@@ -65,7 +66,7 @@ function ChatList({ userid, activeChat, setActiveChat, setMessages, searchQuery 
       <p className="chats-status">You have no chats</p>
     ) : (filteredChats.map((chat, index) => (
       <div key={index} className={`chat-item ${activeChat?.chat_id == chat.chat_id ? "active" : ""}`} onClick={() => (setActiveChat(chat))}>
-        <div className="chat-avatar" style={{backgroundColor: chat.color}}/>
+        <UserIcon className="chat-avatar" color={chat.color} size="52" />
         <div className="chat-info">
           <div className="chat-name">{chat.title}</div>
           <div className="chat-preview"></div>
@@ -218,9 +219,9 @@ const Messenger = () => {
       <main className="chat-area">
         
         <div className="chat-header">
-          <div
+          <UserIcon
             className="chat-avatar"
-            style={{ backgroundColor: activeChat.color }}
+            color={activeChat.color}
           />
           <div className="chat-name">{activeChat.title}</div>
         </div>
@@ -262,4 +263,4 @@ const Messenger = () => {
 );
 };
 
-export {Messenger};
+export default Messenger;

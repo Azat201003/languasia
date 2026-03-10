@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const baseURL = "https://95.165.132.221:67/api";
+const wsURL = "wss://95.165.132.221:67/api"
 
 const api = axios.create({
     baseURL: baseURL, 
@@ -47,4 +48,4 @@ api.interceptors.response.use(
   }
 );
 
-export {api, baseURL};
+export {api, baseURL, wsURL};

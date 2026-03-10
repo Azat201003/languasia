@@ -236,9 +236,9 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 	if len(filter.SearchString) > 0 {
 		query += `
 			WHERE (
-				COALESCE(sml1,0) > 0 OR
-				COALESCE(sml2,0) > 0 OR
-				COALESCE(sml3,0) > 0.001
+				COALESCE(sml1,0) > 0.2 OR
+				COALESCE(sml2,0) > 0.2 OR
+				COALESCE(sml3,0) > 0.07
 			)
 		`
 	}

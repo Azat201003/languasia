@@ -486,7 +486,24 @@ func createChat(c *echo.Context) error {
 
 	userId, ok := c.Get("user_id").(uint64)
 	if !ok {
-		return c.String(http.StatusBadRequest, "user id in autharization token not found")
+		return c.String(http.StatusUnauthorized, "User id in autharization token not found")
+	}
+
+	if request.Type == "Direct" {
+		chats, err := database.DBC.MyChats(userId)
+		if err != nil {
+			return c.String(http.StatusBadRequest, "Cannot get your chat")
+		}
+		for _, chat := range chats {
+			if chat.Type == "Direct" && len(chat.MemberIds) >= 2 && (
+				chat.MemberIds[0] == int64(userId) && chat.MemberIds[1] == int64(request.GoalId) ||
+				chat.MemberIds[1] == int64(userId) && chat.MemberIds[0] == int64(request.GoalId)) {
+				return c.String(http.StatusConflict, "Direct chat with these members already exists")
+			}
+		}
+		if request.GoalId == userId {
+			return c.String(http.StatusBadRequest, "Cannot create chat with yourself")
+		}
 	}
 
 	chatId, err := database.DBC.CreateChat(request)
@@ -497,12 +514,14 @@ func createChat(c *echo.Context) error {
 	err = database.DBC.JoinChat(chatId, userId)
 
 	if err != nil {
+		database.DBC.DeleteChat(chatId)
 		return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add you to chat :(. (btw chat created and it is just trash)")
 	}
 	
 	if request.Type == "Direct" {
 		err = database.DBC.JoinChat(chatId, request.GoalId)
 		if err != nil {
+			database.DBC.DeleteChat(chatId)
 			return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add user to chat :(. (btw chat created and it is just trash)")
 		}
 	}

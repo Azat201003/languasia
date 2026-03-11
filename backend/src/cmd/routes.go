@@ -514,12 +514,14 @@ func createChat(c *echo.Context) error {
 	err = database.DBC.JoinChat(chatId, userId)
 
 	if err != nil {
+		database.DBC.DeleteChat(chatId)
 		return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add you to chat :(. (btw chat created and it is just trash)")
 	}
 	
 	if request.Type == "Direct" {
 		err = database.DBC.JoinChat(chatId, request.GoalId)
 		if err != nil {
+			database.DBC.DeleteChat(chatId)
 			return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add user to chat :(. (btw chat created and it is just trash)")
 		}
 	}

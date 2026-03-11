@@ -225,8 +225,7 @@ const EditProfile = ({
   return (
     <>
       <Header />
-      <div className="profile-background">
-        <div className="profile-card">
+      <div className="profile-card">
           <div className="profile-content">
             <form onSubmit={handleSubmit}>
               {/* Color */}
@@ -418,7 +417,6 @@ const EditProfile = ({
             </div>
           </>
         )}
-      </div>
     </>
   );
 };

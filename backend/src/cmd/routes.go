@@ -486,7 +486,24 @@ func createChat(c *echo.Context) error {
 
 	userId, ok := c.Get("user_id").(uint64)
 	if !ok {
-		return c.String(http.StatusBadRequest, "user id in autharization token not found")
+		return c.String(http.StatusUnauthorized, "User id in autharization token not found")
+	}
+
+	if request.Type == "Direct" {
+		chats, err := database.DBC.MyChats(userId)
+		if err != nil {
+			return c.String(http.StatusBadRequest, "Cannot get your chat")
+		}
+		for _, chat := range chats {
+			if chat.Type == "Direct" && len(chat.MemberIds) >= 2 && (
+				chat.MemberIds[0] == int64(userId) && chat.MemberIds[1] == int64(request.GoalId) ||
+				chat.MemberIds[1] == int64(userId) && chat.MemberIds[0] == int64(request.GoalId)) {
+				return c.String(http.StatusConflict, "Direct chat with these members already exists")
+			}
+		}
+		if request.GoalId == userId {
+			return c.String(http.StatusBadRequest, "Cannot create chat with yourself")
+		}
 	}
 
 	chatId, err := database.DBC.CreateChat(request)

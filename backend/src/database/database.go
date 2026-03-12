@@ -82,7 +82,6 @@ type UserFilter struct {
 	PageNumber       uint64   `json:"page_number"`
 }
 
-// TODO replace json type *_ids to *s
 type Users []struct {
 	UserId             uint64         `json:"user_id"`
 	Username           string         `json:"username"`

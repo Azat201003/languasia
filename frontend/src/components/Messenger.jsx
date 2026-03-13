@@ -103,11 +103,11 @@ const Messenger = () => {
 
     ws.onopen = () => {
       console.log('WebSocket connected');
-      const pingInterval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping' }));
-        }
-      }, 5000);
+      //const pingInterval = setInterval(() => {
+      //  if (ws.readyState === WebSocket.OPEN) {
+      //    ws.send(JSON.stringify({ type: 'ping' }));
+      //  }
+      //}, 5000);
     };
 
     websocket.current.onmessage = (event) => {

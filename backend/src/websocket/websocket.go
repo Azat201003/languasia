@@ -72,7 +72,7 @@ func (h *WebSocketHub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			fmt.Printf("[HUB] Registering client: %v\n", client)
+			fmt.Printf("[HUB] Registering client: %v, %v\n", client, client.clientId)
 			h.mutex.Lock()
 			clientId := h.getUniqueClientId()
             client.clientId = clientId
@@ -81,17 +81,20 @@ func (h *WebSocketHub) Run() {
 			fmt.Printf("[HUB] Client registered on id %d. Total clients: %d\n", clientId, len(h.clients))
 
 		case client := <-h.unregister:
-			fmt.Printf("[HUB] Unregistering client: %v (username: %s)\n", client, client.user.Username)
+            fmt.Printf("[HUB] Unregistering client: %v (username: %s, clientId: %v)\n", client, client.user.Username, client.clientId)
 			h.mutex.Lock()
 			delete(h.clients, client.clientId) // remove from map
+			h.mutex.Unlock()
 			client.mu.Lock()
+            if client.conn != nil {
+                client.conn.Close()
+            }
 			if !client.closed {
 					client.closed = true
 					close(client.send) // unblock writePump
 			}
 			client.mu.Unlock()
 			fmt.Printf("[HUB] Client unregistered. Total clients: %d\n", len(h.clients))
-			h.mutex.Unlock()
 
 		case broadcast := <-h.broadcast:
 			h.mutex.RLock()
@@ -182,26 +185,22 @@ func (h *WebSocketHub) getUniqueClientId() uint64 {
 }
 
 func (c *Client) readPump(hub *WebSocketHub) {
-	fmt.Printf("[READ_PUMP] Starting read pump for client\n")
+    fmt.Printf("[READ_PUMP] Starting read pump for client: %v\n", c.clientId)
 	defer func() {
-		fmt.Printf("[READ_PUMP] Exiting read pump for client: %s\n", c.user.Username)
-		hub.unregister <- c
-		c.mu.Lock()
-		if !c.closed {
-			c.closed = true
-			c.conn.Close()
-		}
-		c.mu.Unlock()
+		fmt.Printf("[READ_PUMP] Exiting read pump for client: %s, %v\n", c.user.Username, c.clientId)
+        if !c.closed {
+		    hub.unregister <- c
+        }
 	}()
 
 	// Настройка обработчиков ping/pong
 	c.conn.SetPongHandler(func(appData string) error {
 		fmt.Printf("[READ_PUMP] Received pong from %s\n", c.user.Username)
-		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 		return nil
 	})
 
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 
 	for {
 		fmt.Printf("[READ_PUMP] Waiting for message from %s\n", c.user.Username)
@@ -307,12 +306,15 @@ func (c *Client) readPump(hub *WebSocketHub) {
 			}
 			c.mu.Unlock()
 
+        case "ungerister":
+            hub.unregister <- c
+
 		default:
 			fmt.Printf("[READ_PUMP] Unknown message type from %s: %s\n", c.user.Username, msg.Type)
 		}
 
 		// Сбрасываем дедлайн для следующего чтения
-		c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+//		c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 	}
 }
 
@@ -324,13 +326,9 @@ func (c *Client) writePump(hub *WebSocketHub) {
 	defer func() {
 		fmt.Printf("[WRITE_PUMP] Stopping write pump for client: %s\n", c.user.Username)
 		pingTicker.Stop()
-		hub.unregister <- c
-		c.mu.Lock()
-		if !c.closed {
-			c.closed = true
-			c.conn.Close()
-		}
-		c.mu.Unlock()
+        if !c.closed {
+		    hub.unregister <- c
+        }
 	}()
 
 	for {

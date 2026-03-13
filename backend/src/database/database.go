@@ -253,7 +253,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 		LIMIT %v
 	`, max(filter.PageNumber, uint64(1))-1, filter.PageSize, max(filter.PageSize, uint64(1)))
 
-	fmt.Println(query)
+//	fmt.Println(query)
 
 	err := dbc.db.Raw(query).Find(&result).Error
 	return result, err

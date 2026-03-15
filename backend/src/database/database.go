@@ -182,8 +182,8 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 			) ll ON true
 			WHERE true
 	`,
-		filter.SearchString, filter.SearchString, filter.SearchString,
-		hobbyArrayStr, knownLangArrayStr, learnLangArrayStr)
+	filter.SearchString, filter.SearchString, filter.SearchString,
+	hobbyArrayStr, knownLangArrayStr, learnLangArrayStr)
 
 	// Add WHERE conditions
 	if len(filter.HobbieIds) > 0 {

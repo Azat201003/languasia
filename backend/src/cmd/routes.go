@@ -408,6 +408,17 @@ func getChatList(c *echo.Context) error {
 				chats[i].MemberIds = chats[i].MemberIds[0:2]
 			}
 		}
+		messages, err := database.DBC.GetMessagesInChat(&database.MessagesRequest{
+			Limit: 1,
+			ChatId: chats[i].ChatId,
+		})
+		if len(messages) < 1 || err != nil {
+			fmt.Println(err)
+			continue
+		} else {
+			fmt.Println("messages: ", messages)
+			chats[i].LastMessage = &messages[0]
+		}
 	}
 	if err != nil {
 		return c.String(http.StatusBadRequest, fmt.Sprintf("Cannot get chat list: %v", err.Error()))

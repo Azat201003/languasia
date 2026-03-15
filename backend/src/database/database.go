@@ -389,11 +389,11 @@ func (dbc *DBController) DeleteUser(userId uint64) error {
 }
 
 type Message struct {
-	MessageId uint64
-	SenderId  uint64
-	Content   string
-	ChatId    uint64
-	CreatedAt time.Time
+	MessageId uint64 `json:"message_id"`
+	SenderId  uint64 `json:"sender_id"`
+	Content   string `json:"content"`
+	ChatId    uint64 `json:"chat_id"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type MessagesRequest struct {
@@ -450,6 +450,7 @@ type Chat struct {
 	Color  string `json:"color"`
 	MemberIds pq.Int64Array `json:"member_ids" gorm:"type:serial[]"`
 	GoalId uint64 `json:"goal_id"` // For type="Direct"
+	LastMessage *Message `json:"last_message" gorm:"-"`
 }
 
 func (dbc *DBController) CreateChat(chat *Chat) (chatId uint64, err error) {

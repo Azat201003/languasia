@@ -103,7 +103,7 @@ func login(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]any{
 		"refresh_token": user.RefreshToken,
 		"jwt_token":     jwt_token_string,
-        "user_id":       user.UserId,
+		"user_id":       user.UserId,
 	})
 }
 
@@ -234,13 +234,13 @@ func deleteUser(c *echo.Context) error {
 }
 
 type updateUserRequest struct {
-	Description string `json:"description"`
-	Password    string `json:"password"`
-	Nickname    string `json:"nickname"`
-	Color       string `json:"color"`
-	AddHobbyIds []database.UserHobby `json:"add_hobbies"`
-	DeleteHobbyIds []database.UserHobby `json:"delete_hobbies"`
-	AddLanguageIds []database.UserLanguage `json:"add_languages"`
+	Description       string                  `json:"description"`
+	Password          string                  `json:"password"`
+	Nickname          string                  `json:"nickname"`
+	Color             string                  `json:"color"`
+	AddHobbyIds       []database.UserHobby    `json:"add_hobbies"`
+	DeleteHobbyIds    []database.UserHobby    `json:"delete_hobbies"`
+	AddLanguageIds    []database.UserLanguage `json:"add_languages"`
 	DeleteLanguageIds []database.UserLanguage `json:"delete_languages"`
 }
 
@@ -268,7 +268,7 @@ func updateUser(c *echo.Context) error {
 	}
 
 	fmt.Printf("Update user password: %v\n", request.Password)
-	
+
 	var passwordHash []byte
 
 	if request.Password != "" {
@@ -283,8 +283,8 @@ func updateUser(c *echo.Context) error {
 		UserId:       userId,
 		PasswordHash: passwordHash,
 		Description:  request.Description,
-        Nickname:     request.Nickname,
-        Color:        request.Color,
+		Nickname:     request.Nickname,
+		Color:        request.Color,
 	}, request.AddLanguageIds, request.DeleteLanguageIds, request.AddHobbyIds, request.DeleteHobbyIds)
 
 	if err != nil {
@@ -386,7 +386,7 @@ func getListHobbies(c *echo.Context) error {
 	return c.JSON(http.StatusOK, hobbies)
 }
 
-func getChatList(c *echo.Context) error {	
+func getChatList(c *echo.Context) error {
 	userIdString := c.ParamOr("user_id", "0")
 
 	userId, err := strconv.ParseUint(userIdString, 10, 64)
@@ -403,10 +403,21 @@ func getChatList(c *echo.Context) error {
 	for i := range chats {
 		if chats[i].Type == "Direct" {
 			_ = completeDirectChat(userId, &chats[i])
-			
+
 			if len(chats[i].MemberIds) > 2 {
 				chats[i].MemberIds = chats[i].MemberIds[0:2]
 			}
+		}
+		messages, err := database.DBC.GetMessagesInChat(&database.MessagesRequest{
+			Limit:  1,
+			ChatId: chats[i].ChatId,
+		})
+		if len(messages) < 1 || err != nil {
+			fmt.Println(err)
+			continue
+		} else {
+			fmt.Println("messages: ", messages)
+			chats[i].LastMessage = &messages[0]
 		}
 	}
 	if err != nil {
@@ -441,10 +452,10 @@ func completeDirectChat(myUserId uint64, chat *database.Chat) error {
 	chat.Title = members[0].Nickname
 	chat.GoalId = members[0].UserId
 	fmt.Println("Member: ", members[0])
-	return nil 
+	return nil
 }
 
-func getChat(c *echo.Context) error {	
+func getChat(c *echo.Context) error {
 	userId, ok := c.Get("user_id").(uint64)
 	if !ok {
 		return c.String(http.StatusBadRequest, "Cannot parse user_id from token")
@@ -453,7 +464,7 @@ func getChat(c *echo.Context) error {
 	chatIdString := c.ParamOr("chat_id", "0")
 
 	chatId, err := strconv.ParseUint(chatIdString, 10, 64)
-	
+
 	if err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Cannot parse chat_id: %v", err.Error()))
 		return err
@@ -495,8 +506,7 @@ func createChat(c *echo.Context) error {
 			return c.String(http.StatusBadRequest, "Cannot get your chat")
 		}
 		for _, chat := range chats {
-			if chat.Type == "Direct" && len(chat.MemberIds) >= 2 && (
-				chat.MemberIds[0] == int64(userId) && chat.MemberIds[1] == int64(request.GoalId) ||
+			if chat.Type == "Direct" && len(chat.MemberIds) >= 2 && (chat.MemberIds[0] == int64(userId) && chat.MemberIds[1] == int64(request.GoalId) ||
 				chat.MemberIds[1] == int64(userId) && chat.MemberIds[0] == int64(request.GoalId)) {
 				return c.String(http.StatusConflict, "Direct chat with these members already exists")
 			}
@@ -517,7 +527,7 @@ func createChat(c *echo.Context) error {
 		database.DBC.DeleteChat(chatId)
 		return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add you to chat :(. (btw chat created and it is just trash)")
 	}
-	
+
 	if request.Type == "Direct" {
 		err = database.DBC.JoinChat(chatId, request.GoalId)
 		if err != nil {
@@ -531,7 +541,7 @@ func createChat(c *echo.Context) error {
 	})
 }
 
-func addMember(c *echo.Context) error {	
+func addMember(c *echo.Context) error {
 	myUserId, ok := c.Get("user_id").(uint64)
 	if myUserId == uint64(0) || myUserId == 0 || !ok {
 		return c.String(http.StatusUnauthorized, "my user id = 0")
@@ -557,13 +567,12 @@ func addMember(c *echo.Context) error {
 	if !slices.Contains(memberIds, int64(myUserId)) {
 		return c.String(http.StatusForbidden, "User is not member of this chat")
 	}
-	
+
 	err = database.DBC.JoinChat(chatId, userId)
 
 	if err != nil {
 		return c.String(http.StatusTeapot, "I wanna make tea when see that I cannot add user to chat :(.")
 	}
-	
 
 	return c.NoContent(http.StatusOK)
 }
@@ -587,4 +596,3 @@ func getMyUser(c *echo.Context) error {
 	user := users[0]
 	return c.JSON(http.StatusOK, user)
 }
-

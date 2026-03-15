@@ -10,6 +10,7 @@ const EditProfile = ({
   initialName = '',
   initialColor = '',
   initialDescription = '',
+  initialPassword = '',
   initialHobbyTitles = [],
   initialKnownLanguageNames = [],
   initialLearnLanguageNames = [],
@@ -28,6 +29,7 @@ const EditProfile = ({
   const [color, setColor] = useState(initialColor);
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
+  const [password, setPassword] = useState(initialPassword);
 
   // Lists (as titles for display)
   const [hobbies, setHobbies] = useState(initialHobbyTitles);
@@ -191,13 +193,16 @@ const EditProfile = ({
         ...learnLangChanges.removed.map(id => ({ language_id: id, is_known: false })),
       ],
     };
+    if (password != "") {
+      payload["password"] = password;
+    }
 
-      const response = await api.patch(`/users/${userId}`, 
-        payload,
-      );
+    const response = await api.patch(`/users/${userId}`, 
+      payload,
+    );
 
-      fetchData();
-      if (onSave) onSave();
+    fetchData();
+    if (onSave) onSave();
   };
 
   const openWindow = (param) => {
@@ -252,6 +257,18 @@ const EditProfile = ({
                   className="name-input"
                 />
               </div>
+              
+              {/* Password */}
+              <div className="section">
+                <div className="section-title">Password</div>
+                <input
+                  type="text"
+                  className="password-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter new password..."
+                />
+              </div>
 
               {/* About */}
               <div className="section">
@@ -261,7 +278,7 @@ const EditProfile = ({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Enter your description..."
-                  rows={5}
+                  rows={3}
                 />
               </div>
 

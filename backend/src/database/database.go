@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -83,12 +83,12 @@ type UserFilter struct {
 }
 
 type Users []struct {
-	UserId             uint64         `json:"user_id"`
-	Username           string         `json:"username"`
-	Nickname           string         `json:"nickname"`
-	Color              string         `json:"color"`
-	Description        string         `json:"description"`
-	HobbyIds        pq.Int64Array `json:"hobby_title_ids" gorm:"type:serial[]"`
+	UserId           uint64        `json:"user_id"`
+	Username         string        `json:"username"`
+	Nickname         string        `json:"nickname"`
+	Color            string        `json:"color"`
+	Description      string        `json:"description"`
+	HobbyIds         pq.Int64Array `json:"hobby_title_ids" gorm:"type:serial[]"`
 	KnownLanguageIds pq.Int64Array `json:"known_language_ids" gorm:"type:serial[]"`
 	LearnLanguageIds pq.Int64Array `json:"learn_language_ids" gorm:"type:serial[]"`
 }
@@ -98,7 +98,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 
 	// Build array strings for WHERE conditions
 	var hobbyArrayStr, knownLangArrayStr, learnLangArrayStr string
-	
+
 	if len(filter.HobbieIds) > 0 {
 		hobbyIdStrings := make([]string, len(filter.HobbieIds))
 		for i := 0; i < len(filter.HobbieIds); i++ {
@@ -181,9 +181,9 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 				WHERE ul.user_id = u.user_id AND ul.is_known = false
 			) ll ON true
 			WHERE true
-	`, 
-	filter.SearchString, filter.SearchString, filter.SearchString,
-	hobbyArrayStr, knownLangArrayStr, learnLangArrayStr)
+	`,
+		filter.SearchString, filter.SearchString, filter.SearchString,
+		hobbyArrayStr, knownLangArrayStr, learnLangArrayStr)
 
 	// Add WHERE conditions
 	if len(filter.HobbieIds) > 0 {
@@ -227,7 +227,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 			AND u.user_id = %v
 		`, filter.UserId)
 	}
-	
+
 	query += `
 		)
 	`
@@ -252,7 +252,7 @@ func (dbc *DBController) RecieveFilteredUsers(filter *UserFilter) (Users, error)
 		LIMIT %v
 	`, max(filter.PageNumber, uint64(1))-1, filter.PageSize, max(filter.PageSize, uint64(1)))
 
-//	fmt.Println(query)
+	//	fmt.Println(query)
 
 	err := dbc.db.Raw(query).Find(&result).Error
 	return result, err
@@ -284,7 +284,7 @@ func (dbc *DBController) UpdadateUser(user *User, newLanguageIds []UserLanguage,
 	}
 
 	var err error
-	
+
 	if len(updateStrings) > 0 {
 		query += "SET "
 
@@ -301,17 +301,17 @@ func (dbc *DBController) UpdadateUser(user *User, newLanguageIds []UserLanguage,
 		language.UserId = user.UserId
 		err = errors.Join(err, dbc.AddLanguage(&language))
 	}
-	
+
 	for _, language := range oldLanguageIds {
 		language.UserId = user.UserId
 		err = errors.Join(err, dbc.DeleteLanguage(&language))
 	}
-	
+
 	for _, hobby := range newHobbyIds {
 		hobby.UserId = user.UserId
 		err = errors.Join(err, dbc.AddHobby(&hobby))
 	}
-	
+
 	for _, hobby := range oldHobbyIds {
 		hobby.UserId = user.UserId
 		err = errors.Join(err, dbc.DeleteHobby(&hobby))
@@ -326,7 +326,7 @@ func (dbc *DBController) DeleteLanguage(language *UserLanguage) error {
 
 type Language struct {
 	LanguageId uint64 `json:"language_id"`
-	Name string `json:"name"`
+	Name       string `json:"name"`
 }
 
 func (dbc *DBController) GetLanguagesList() ([]Language, error) {
@@ -355,7 +355,7 @@ func (dbc *DBController) DeleteHobby(hobby *UserHobby) error {
 }
 
 type Hobby struct {
-	Title string `json:"title"`
+	Title   string `json:"title"`
 	HobbyId uint64 `json:"hobby_id"`
 }
 
@@ -389,10 +389,10 @@ func (dbc *DBController) DeleteUser(userId uint64) error {
 }
 
 type Message struct {
-	MessageId uint64 `json:"message_id"`
-	SenderId  uint64 `json:"sender_id"`
-	Content   string `json:"content"`
-	ChatId    uint64 `json:"chat_id"`
+	MessageId uint64    `json:"message_id"`
+	SenderId  uint64    `json:"sender_id"`
+	Content   string    `json:"content"`
+	ChatId    uint64    `json:"chat_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -444,13 +444,13 @@ func (dbc *DBController) DeleteMessage(messageId uint64) error {
 }
 
 type Chat struct {
-	ChatId uint64 `json:"chat_id"`
-	Title  string `json:"title"`
-	Type   string `json:"type"`
-	Color  string `json:"color"`
-	MemberIds pq.Int64Array `json:"member_ids" gorm:"type:serial[]"`
-	GoalId uint64 `json:"goal_id"` // For type="Direct"
-	LastMessage *Message `json:"last_message" gorm:"-"`
+	ChatId      uint64        `json:"chat_id"`
+	Title       string        `json:"title"`
+	Type        string        `json:"type"`
+	Color       string        `json:"color"`
+	MemberIds   pq.Int64Array `json:"member_ids" gorm:"type:serial[]"`
+	GoalId      uint64        `json:"goal_id"` // For type="Direct"
+	LastMessage *Message      `json:"last_message" gorm:"-"`
 }
 
 func (dbc *DBController) CreateChat(chat *Chat) (chatId uint64, err error) {

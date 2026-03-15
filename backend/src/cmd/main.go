@@ -26,14 +26,14 @@ func tokenByString(tokenString string) (uint64, error) {
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
 
 	if err != nil {
-		return 0,  err
+		return 0, err
 	}
 	userIdString, err := token.Claims.GetIssuer()
 
 	if err != nil {
 		return 0, err
 	}
-	
+
 	userId, err := strconv.ParseUint(userIdString, 10, 64)
 
 	if err != nil {
@@ -83,7 +83,7 @@ func main() {
 	// server
 	e := echo.New()
 
-    e.Use(middleware.CORS("*"))
+	e.Use(middleware.CORS("*"))
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 	e.Use(authMiddlware)

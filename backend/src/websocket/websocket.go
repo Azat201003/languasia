@@ -16,9 +16,9 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-    CheckOrigin: func(r *http.Request) bool {
-        return true
-    },
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 type Client struct {
@@ -75,23 +75,23 @@ func (h *WebSocketHub) Run() {
 			fmt.Printf("[HUB] Registering client: %v, %v\n", client, client.clientId)
 			h.mutex.Lock()
 			clientId := h.getUniqueClientId()
-            client.clientId = clientId
+			client.clientId = clientId
 			h.clients[clientId] = client
 			h.mutex.Unlock()
 			fmt.Printf("[HUB] Client registered on id %d. Total clients: %d\n", clientId, len(h.clients))
 
 		case client := <-h.unregister:
-            fmt.Printf("[HUB] Unregistering client: %v (username: %s, clientId: %v)\n", client, client.user.Username, client.clientId)
+			fmt.Printf("[HUB] Unregistering client: %v (username: %s, clientId: %v)\n", client, client.user.Username, client.clientId)
 			h.mutex.Lock()
 			delete(h.clients, client.clientId) // remove from map
 			h.mutex.Unlock()
 			client.mu.Lock()
-            if client.conn != nil {
-                client.conn.Close()
-            }
+			if client.conn != nil {
+				client.conn.Close()
+			}
 			if !client.closed {
-					client.closed = true
-					close(client.send) // unblock writePump
+				client.closed = true
+				close(client.send) // unblock writePump
 			}
 			client.mu.Unlock()
 			fmt.Printf("[HUB] Client unregistered. Total clients: %d\n", len(h.clients))
@@ -108,8 +108,8 @@ func (h *WebSocketHub) Run() {
 				containsUser = true
 			} else {
 				userIds, err := database.DBC.GetChatMembers(broadcast.ChatId)
-                fmt.Println(userIds)
-                fmt.Println("h.clients", h.clients)
+				fmt.Println(userIds)
+				fmt.Println("h.clients", h.clients)
 
 				containsUser = true
 				if !slices.Contains(userIds, broadcast.UserId) {
@@ -174,23 +174,23 @@ func (h *WebSocketHub) Run() {
 
 			fmt.Println("[HUB] Broadcast completed")
 		}
-    }
+	}
 }
 
 func (h *WebSocketHub) getUniqueClientId() uint64 {
-    var i uint64 = 1
-    for ; h.clients[i] != nil; i++ {
+	var i uint64 = 1
+	for ; h.clients[i] != nil; i++ {
 	}
 	return i
 }
 
 func (c *Client) readPump(hub *WebSocketHub) {
-    fmt.Printf("[READ_PUMP] Starting read pump for client: %v\n", c.clientId)
+	fmt.Printf("[READ_PUMP] Starting read pump for client: %v\n", c.clientId)
 	defer func() {
 		fmt.Printf("[READ_PUMP] Exiting read pump for client: %s, %v\n", c.user.Username, c.clientId)
-        if !c.closed {
-		    hub.unregister <- c
-        }
+		if !c.closed {
+			hub.unregister <- c
+		}
 	}()
 
 	// Настройка обработчиков ping/pong
@@ -234,12 +234,12 @@ func (c *Client) readPump(hub *WebSocketHub) {
 				continue
 			}
 			hub.broadcast <- Broadcast{
-                ChatId: chatMessage.ChatId,
-                UserId: c.user.UserId,
-                Content: chatMessage.Content,
-                CreatedAt: time.Now(),
-                MessageId: 0,
-            }
+				ChatId:    chatMessage.ChatId,
+				UserId:    c.user.UserId,
+				Content:   chatMessage.Content,
+				CreatedAt: time.Now(),
+				MessageId: 0,
+			}
 
 		case "recieve_messages":
 			fmt.Println("[READ_PUMP] Received messages")
@@ -306,15 +306,15 @@ func (c *Client) readPump(hub *WebSocketHub) {
 			}
 			c.mu.Unlock()
 
-        case "ungerister":
-            hub.unregister <- c
+		case "ungerister":
+			hub.unregister <- c
 
 		default:
 			fmt.Printf("[READ_PUMP] Unknown message type from %s: %s\n", c.user.Username, msg.Type)
 		}
 
 		// Сбрасываем дедлайн для следующего чтения
-//		c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		//		c.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 	}
 }
 
@@ -326,9 +326,9 @@ func (c *Client) writePump(hub *WebSocketHub) {
 	defer func() {
 		fmt.Printf("[WRITE_PUMP] Stopping write pump for client: %s\n", c.user.Username)
 		pingTicker.Stop()
-        if !c.closed {
-		    hub.unregister <- c
-        }
+		if !c.closed {
+			hub.unregister <- c
+		}
 	}()
 
 	for {

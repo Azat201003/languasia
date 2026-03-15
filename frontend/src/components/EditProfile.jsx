@@ -259,14 +259,14 @@ const EditProfile = ({
               </div>
               
               {/* Password */}
-              <div className="section">
+              <div className="section password-section">
                 <div className="section-title">Password</div>
                 <input
                   type="text"
                   className="password-input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter new password..."
+                  placeholder="Enter new password... (won't change, if there is empty string)"
                 />
               </div>
 

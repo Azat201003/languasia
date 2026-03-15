@@ -269,6 +269,26 @@
   -webkit-appearance: none;
 }
 
+.password-section {
+  margin-top: 20px;
+}
+
+.password-input {
+  flex: 1;
+  padding: 14px 20px;
+  background-color: #2f2f2f;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 15px;
+  height: 80%;
+  width: 100%;
+}
+
+.password-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px #40b26e94;
+}
 
 .name-section {
   margin-top: 20px;

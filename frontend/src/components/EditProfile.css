@@ -324,3 +324,85 @@ button {
   cursor: pointer;
 }
 
+/* Tab switcher layout */
+.profile-card {
+  display: flex;
+  flex-direction: row;
+  padding: 0; /* remove padding to allow full-height tabs */
+}
+
+.profile-tabs {
+  width: 180px;
+  background-color: #1e1e1e;
+  border-right: 1px solid #333;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tab-button:hover {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.tab-button.active {
+  color: #40B26E;
+}
+
+.tab-button.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #40B26E;
+}
+
+.profile-tab-content {
+  flex: 1;
+  padding: 0 40px 40px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Error message */
+.error-message {
+  color: #ff6b6b;
+  background-color: #ff6b6b20;
+  border: 1px solid #ff6b6b;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-top: 20px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Security tab specific */
+.password-section .section-title {
+  margin-bottom: 8px;
+}

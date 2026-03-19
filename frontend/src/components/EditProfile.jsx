@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './EditProfile.css';
 import { api } from "../api.jsx";
 import { useNavigate } from 'react-router-dom';
-// import Logo from '../assets/Logo.svg'; // not used
-import Settings from '../assets/settings.svg';
 import Header from './Header';
 
 const EditProfile = ({
@@ -21,10 +19,7 @@ const EditProfile = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
-
-  // Modal state
-  const [isOpen, setIsOpen] = useState(false);
-  const [openedParam, setOpenedParam] = useState('');
+  const [activeTab, setActiveTab] = useState('common'); // 'common' or 'security'
 
   // Form fields
   const [color, setColor] = useState(initialColor);
@@ -48,77 +43,70 @@ const EditProfile = ({
   const [initialLearnLanguageIds, setInitialLearnLanguageIds] = useState([]);
 
   // Input fields for new items
-    const [newHobby, setNewHobby] = useState('');
-    const [newKnownLang, setNewKnownLang] = useState('');
-    const [newLearnLang, setNewLearnLang] = useState('');
+  const [newHobby, setNewHobby] = useState('');
+  const [newKnownLang, setNewKnownLang] = useState('');
+  const [newLearnLang, setNewLearnLang] = useState('');
 
+  // Password validation error
+  const [passwordError, setPasswordError] = useState('');
 
   const onSignOut = async () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user_id");
     localStorage.removeItem("refresh_token");
     window.location.reload();
-  }
+  };
 
   const onCancel = async () => {
     navigate("/");
     window.location.reload();
-  }
-  const fetchData = async () => {
-      try {
-        // Fetch current user
-        const userRes = await api.get('/my');
-
-        console.log(userRes);
-
-        const user = userRes.data;
-
-        // Populate form
-        setName(user.nickname || '');
-        setColor(user.color || '');
-        setDescription(user.description || '');
-        setInitialHobbyIds(user.hobby_title_ids || []);
-        setInitialKnownLanguageIds(user.known_language_ids || []);
-        setInitialLearnLanguageIds(user.learn_language_ids || []);
-
-        // Fetch master data (hobbies and languages)
-        const [hobbiesRes, languagesRes] = await Promise.all([
-          api.get('/hobbies'),
-          api.get('/languages'),
-        ]);
-
-        const hobbiesData = await hobbiesRes.data;
-        const languagesData = await languagesRes.data;
-
-        setAllHobbies(hobbiesData);
-        setAllLanguages(languagesData);
-
-        // Map IDs to titles for display
-        setHobbies(
-          hobbiesData
-            .filter(h => user.hobby_title_ids.includes(h.hobby_id))
-            .map(h => h.title)
-        );
-        setKnownLanguages(
-          languagesData
-            .filter(l => user.known_language_ids.includes(l.language_id))
-            .map(l => l.name)
-        );
-        setLearnLanguages(
-          languagesData
-            .filter(l => user.learn_language_ids.includes(l.language_id))
-            .map(l => l.name)
-        );
-        console.log("hobbies: ", hobbies);
-        console.log("hobbiesData: ", hobbiesData);
-        console.log("user.hobby_title_id: ", user.hobby_title_ids);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
   };
-  
+
+  const fetchData = async () => {
+    try {
+      const userRes = await api.get('/my');
+      const user = userRes.data;
+
+      setName(user.nickname || '');
+      setColor(user.color || '');
+      setDescription(user.description || '');
+      setInitialHobbyIds(user.hobby_title_ids || []);
+      setInitialKnownLanguageIds(user.known_language_ids || []);
+      setInitialLearnLanguageIds(user.learn_language_ids || []);
+
+      const [hobbiesRes, languagesRes] = await Promise.all([
+        api.get('/hobbies'),
+        api.get('/languages'),
+      ]);
+
+      const hobbiesData = hobbiesRes.data;
+      const languagesData = languagesRes.data;
+
+      setAllHobbies(hobbiesData);
+      setAllLanguages(languagesData);
+
+      setHobbies(
+        hobbiesData
+          .filter(h => user.hobby_title_ids.includes(h.hobby_id))
+          .map(h => h.title)
+      );
+      setKnownLanguages(
+        languagesData
+          .filter(l => user.known_language_ids.includes(l.language_id))
+          .map(l => l.name)
+      );
+      setLearnLanguages(
+        languagesData
+          .filter(l => user.learn_language_ids.includes(l.language_id))
+          .map(l => l.name)
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('user_id');
@@ -130,16 +118,14 @@ const EditProfile = ({
     }
 
     setUserId(parseInt(storedUserId));
-
-
     fetchData();
   }, []);
 
   const addItem = (value, setter, inputSetter, all, key) => {
     if (value.trim()) {
       if (all.map(el => el[key]).includes(value)) {
-          setter(prev => [...prev, value.trim()]);
-          inputSetter('');
+        setter(prev => [...prev, value.trim()]);
+        inputSetter('');
       }
     }
   };
@@ -150,29 +136,24 @@ const EditProfile = ({
 
   const handleCommonSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
 
     const token = localStorage.getItem('token');
     if (!token || !userId) {
-      alert('Authentication missing');
+      setError('Authentication missing');
       return;
     }
 
-    // Helper to get added/removed IDs based on titles
     const getChanges = (currentTitles, initialIds, allItems, titleKey, idKey) => {
-      console.log(currentTitles, initialIds, allItems, titleKey, idKey);
       const currentIds = currentTitles
         .map(title => {
           const item = allItems.find(i => i[titleKey] === title);
           return item ? item[idKey] : null;
         })
         .filter(id => id !== null);
-      
-      console.log(currentIds);
 
       const added = currentIds.filter(id => !initialIds.includes(id));
       const removed = initialIds.filter(id => !currentIds.includes(id));
-
-      console.log(added, removed);
       return { added, removed };
     };
 
@@ -196,25 +177,47 @@ const EditProfile = ({
       ],
     };
 
-    const response = await api.patch(`/users/${userId}`, 
-      payload,
-    );
-
-    fetchData();
-    if (onSave) onSave();
+    try {
+      await api.patch(`/users/${userId}`, payload);
+      await fetchData();
+      //if (onSave) onSave();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save changes');
+    }
   };
 
-  const openWindow = (param) => {
-    setOpenedParam(param);
-    setIsOpen(true);
+  const handleSecuritySubmit = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setError(null);
+
+    // Validate passwords
+    if (password || passwordConfirmation) {
+      if (password !== passwordConfirmation) {
+        setPasswordError('Passwords do not match');
+        return;
+      }
+      if (password.length < 2) {
+        setPasswordError('Password must be at least 6 characters');
+        return;
+      }
+    } else {
+      // No password change requested
+      setError('No password provided');
+      return;
+    }
+
+    try {
+      await api.patch(`/users/${userId}`, { password });
+      // Clear fields on success
+      setPassword('');
+      setPasswordConfirmation('');
+      //if (onSave) onSave();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update password');
+    }
   };
 
-  const closeModal = () => {
-    setIsOpen(false);
-    setOpenedParam('');
-  };
-
-  // Render chips with remove button
   const renderRemovableChips = (items, setter, isLearn = false) => {
     return items.map((item, index) => (
       <span key={index} className={`chip ${isLearn ? 'learn' : ''}`}>
@@ -226,238 +229,237 @@ const EditProfile = ({
     ));
   };
 
-  const State = Object.freeze({
-    COMMON: 0,
-    SECURITY: 1
-  });
-
-  const state = State.COMMON;
-
-  const handleSecuritySubmit = async () => {
-    const payload = {}
-    if (password != "") {
-      payload["password"] = password;
-    }
-  }
+  if (loading) return <div>Loading...</div>;
 
   return (
     <>
       <Header />
       <div className="profile-background">
         <div className="profile-card">
-          {state == State.COMMON ? (
-          <div className="profile-content">
-            <form onSubmit={handleCommonSubmit}>
-              {/* Color */}
-              <div className="section name-section">
-                <div className="color-wrapper">
+          {/* Left tabs */}
+          <div className="profile-tabs">
+            <button
+              className={`tab-button ${activeTab === 'common' ? 'active' : ''}`}
+              onClick={() => setActiveTab('common')}
+            >
+              Common
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'security' ? 'active' : ''}`}
+              onClick={() => setActiveTab('security')}
+            >
+              Security
+            </button>
+          </div>
+
+          {/* Right content with fade animation (key triggers re-mount) */}
+          <div key={activeTab} className="profile-tab-content">
+            {activeTab === 'common' ? (
+              <form onSubmit={handleCommonSubmit}>
+                {/* Color */}
+                <div className="section name-section">
+                  <div className="color-wrapper">
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="view-profile"
+                    />
+                  </div>
+                </div>
+
+                {/* Name */}
+                <div className="section name-section">
+                  <div className="section-title">Nickname</div>
                   <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="view-profile"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter nickname..."
+                    className="name-input"
                   />
                 </div>
-              </div>
-              
-              {/* Name */}
-              <div className="section name-section">
-                <div className="section-title">Nickname</div>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter nickname..."
-                  className="name-input"
-                />
-              </div>
 
-              {/* About */}
-              <div className="section">
-                <div className="section-title">Bio</div>
-                <textarea
-                  className="description-textarea"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter your description..."
-                  rows={3}
-                />
-              </div>
-
-              {/* Hobbies */}
-              <div className="section">
-                <div className="section-title">Hobbies</div>
-                <div>
-                  <div className="chip-input-group">
-                    <input
-                      type="text"
-                      list="hobbies-options"
-                      value={newHobby}
-                      onChange={(e) => setNewHobby(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addItem(newHobby, setHobbies, setNewHobby, allHobbies, "title");
-                        }
-                      }}
-                      placeholder="Add hobby..."
-                      className="chip-input"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addItem(newHobby, setHobbies, setNewHobby, allHobbies, "title")}
-                      className="chip-add-btn"
-                    >
-                    +
-                    </button>
-                  </div>
-                  <div className="chips">{renderRemovableChips(hobbies, setHobbies)}</div>
+                {/* About */}
+                <div className="section">
+                  <div className="section-title">Bio</div>
+                  <textarea
+                    className="description-textarea"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter your description..."
+                    rows={3}
+                  />
                 </div>
-              </div>
 
-              {/* Known languages */}
-              <div className="section">
-                <div className="section-title">Known languages</div>
-                <div>
-                  <div className="chip-input-group">
-                    <input
-                      type="text"
-                      list="languages-options"
-                      value={newKnownLang}
-                      onChange={(e) => setNewKnownLang(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addItem(newKnownLang, setKnownLanguages, setNewKnownLang, allLanguages, "name");
-                        }
-                      }}
-                      placeholder="Enter language..."
-                      className="chip-input"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addItem(newKnownLang, setKnownLanguages, setNewKnownLang, allLanguages, "name")}
-                      className="chip-add-btn"
-                    >
-                    +
-                    </button>
+                {/* Hobbies */}
+                <div className="section">
+                  <div className="section-title">Hobbies</div>
+                  <div>
+                    <div className="chip-input-group">
+                      <input
+                        type="text"
+                        list="hobbies-options"
+                        value={newHobby}
+                        onChange={(e) => setNewHobby(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addItem(newHobby, setHobbies, setNewHobby, allHobbies, "title");
+                          }
+                        }}
+                        placeholder="Add hobby..."
+                        className="chip-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addItem(newHobby, setHobbies, setNewHobby, allHobbies, "title")}
+                        className="chip-add-btn"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="chips">{renderRemovableChips(hobbies, setHobbies)}</div>
                   </div>
-                  <div className="chips">{renderRemovableChips(knownLanguages, setKnownLanguages)}</div>
                 </div>
-              </div>
 
-              {/* Learning languages */}
-              <div className="section">
-                <div className="section-title">Learn languages</div>
-                <div>
-                  <div className="chip-input-group">
-                    <input
-                      list="languages-options"
-                      type="text"
-                      value={newLearnLang}
-                      onChange={(e) => setNewLearnLang(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addItem(newLearnLang, setLearnLanguages, setNewLearnLang, allLanguages, "name");
-                        }
-                      }}
-                      placeholder="Add language..."
-                      className="chip-input"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addItem(newLearnLang, setLearnLanguages, setNewLearnLang, allLanguages, "name")}
-                      className="chip-add-btn"
-                    >
-                    +
-                    </button>
+                {/* Known languages */}
+                <div className="section">
+                  <div className="section-title">Known languages</div>
+                  <div>
+                    <div className="chip-input-group">
+                      <input
+                        type="text"
+                        list="languages-options"
+                        value={newKnownLang}
+                        onChange={(e) => setNewKnownLang(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addItem(newKnownLang, setKnownLanguages, setNewKnownLang, allLanguages, "name");
+                          }
+                        }}
+                        placeholder="Enter language..."
+                        className="chip-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addItem(newKnownLang, setKnownLanguages, setNewKnownLang, allLanguages, "name")}
+                        className="chip-add-btn"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="chips">{renderRemovableChips(knownLanguages, setKnownLanguages)}</div>
                   </div>
-                  <div className="chips">{renderRemovableChips(learnLanguages, setLearnLanguages, true)}</div>
                 </div>
-              </div>
 
-              {/* Footer buttons */}
-              <div className="profile-footer" style={{ display: 'flex', gap: '16px' }}>
-                <button type="submit" className="edit-btn">
-                  Save changes
-                </button>
-                <button type="button" className="edit-btn cancel-btn" onClick={onCancel}>
-                  Cancel
-                </button>
-                <button type="button" className="edit-btn signout-btn" onClick={onSignOut}>
-                  Sign out
-                </button>
-              </div>
+                {/* Learning languages */}
+                <div className="section">
+                  <div className="section-title">Learn languages</div>
+                  <div>
+                    <div className="chip-input-group">
+                      <input
+                        list="languages-options"
+                        type="text"
+                        value={newLearnLang}
+                        onChange={(e) => setNewLearnLang(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addItem(newLearnLang, setLearnLanguages, setNewLearnLang, allLanguages, "name");
+                          }
+                        }}
+                        placeholder="Add language..."
+                        className="chip-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addItem(newLearnLang, setLearnLanguages, setNewLearnLang, allLanguages, "name")}
+                        className="chip-add-btn"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="chips">{renderRemovableChips(learnLanguages, setLearnLanguages, true)}</div>
+                  </div>
+                </div>
+
+                {/* Footer buttons */}
+                <div className="profile-footer" style={{ display: 'flex', gap: '16px' }}>
+                  <button type="submit" className="edit-btn">
+                    Save changes
+                  </button>
+                  <button type="button" className="edit-btn cancel-btn" onClick={onCancel}>
+                    Cancel
+                  </button>
+                  <button type="button" className="edit-btn signout-btn" onClick={onSignOut}>
+                    Sign out
+                  </button>
+                </div>
+
                 <datalist id="hobbies-options">
-                  {allHobbies.map((item, index) => (
-                    <option value={item.title} />
+                  {allHobbies.map((item) => (
+                    <option key={item.hobby_id} value={item.title} />
                   ))}
                 </datalist>
                 <datalist id="languages-options">
-                  {allLanguages.map((item, index) => (
-                    <option value={item.name} />
+                  {allLanguages.map((item) => (
+                    <option key={item.language_id} value={item.name} />
                   ))}
                 </datalist>
-            </form>
-          </div>
-          ) : state = State.SEQURITY (
-          <div className="profile-content">
-            <form onSubmit={handleCommonSubmit}>
-              {/* Password */}
-              <div className="section password-section">
-                <div className="section-password">Password</div>
-                <input
-                  type="text"
-                  className="password-input"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter new password... (won't change, if there is empty string)"
-                />
-              </div>
+              </form>
+            ) : (
+              <form onSubmit={handleSecuritySubmit}>
+                {/* Password */}
+                <div className="section password-section">
+                  <div className="section-title">New Password</div>
+                  <input
+                    type="password"
+                    className="password-input"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter new password (min. 6 characters)"
+                  />
+                </div>
 
-              {/* Password confirmation */}
-              <div className="section password-section">
-                <div className="section-password">Repeat</div>
-                <textarea
-                  className="description-textarea"
-                  value={description}
-                  onChange={(e) => setPasswordConfirmation(e.target.value)}
-                  placeholder="Enter new password again..."
-                  rows={3}
-                />
-              </div>
+                {/* Password confirmation */}
+                <div className="section password-section">
+                  <div className="section-title">Confirm Password</div>
+                  <input
+                    type="password"
+                    className="password-input"
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
+                    placeholder="Re-enter new password"
+                  />
+                </div>
 
-              {/* Footer buttons */}
-              <div className="profile-footer" style={{ display: 'flex', gap: '16px' }}>
-                <button type="submit" className="edit-btn">
-                  Save changes
-                </button>
-                <button type="button" className="edit-btn cancel-btn" onClick={onCancel}>
-                  Cancel
-                </button>
-                <button type="button" className="edit-btn signout-btn" onClick={onSignOut}>
-                  Sign out
-                </button>
-              </div>
-                <datalist id="hobbies-options">
-                  {allHobbies.map((item, index) => (
-                    <option value={item.title} />
-                  ))}
-                </datalist>
-                <datalist id="languages-options">
-                  {allLanguages.map((item, index) => (
-                    <option value={item.name} />
-                  ))}
-                </datalist>
-            </form>
+                {/* Footer buttons */}
+                <div className="profile-footer" style={{ display: 'flex', gap: '16px' }}>
+                  <button type="submit" className="edit-btn">
+                    Update password
+                  </button>
+                  <button type="button" className="edit-btn cancel-btn" onClick={onCancel}>
+                    Cancel
+                  </button>
+                  <button type="button" className="edit-btn signout-btn" onClick={onSignOut}>
+                    Sign out
+                  </button>
+                </div>
+
+                {/* Password-specific error */}
+                {passwordError && <div className="error-message">{passwordError}</div>}
+              </form>
+            )}
+
+            {/* General error display (appears in both tabs) */}
+            {error && <div className="error-message">{error}</div>}
           </div>
-          
-          )}
         </div>
       </div>
     </>
   );
 };
 
-export { EditProfile };
+export {EditProfile};

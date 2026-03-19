@@ -18,7 +18,7 @@ services:
       start_period: 15s
 
   app:
-    build: backend/
+    build: backend
     container_name: languasia-app
     expose: 
       - 8080
@@ -62,12 +62,11 @@ services:
   swagger-ui:
     image: docker.swagger.io/swaggerapi/swagger-ui
     container_name: languasia-swagger-ui
-    depends_on:
-      - proxy
     volumes:
       - ./backend/openapi.yml:/openapi.yaml
     environment:
       SWAGGER_JSON: /openapi.yaml
+    restart: unless-stopped
     networks:
       - languasia-network
 
@@ -81,7 +80,7 @@ services:
     volumes:
       - ./nginx:/etc/nginx:ro
       - ./loading:/var/www/html/loading:ro
-    restart: always
+    restart: unless-stopped
     networks:
       - languasia-network
     healthcheck:

@@ -11,6 +11,7 @@ const EditProfile = ({
   initialColor = '',
   initialDescription = '',
   initialPassword = '',
+  initialPasswordConfirmation = '',
   initialHobbyTitles = [],
   initialKnownLanguageNames = [],
   initialLearnLanguageNames = [],
@@ -30,6 +31,7 @@ const EditProfile = ({
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [password, setPassword] = useState(initialPassword);
+  const [passwordConfirmation, setPasswordConfirmation] = useState(initialPasswordConfirmation);
 
   // Lists (as titles for display)
   const [hobbies, setHobbies] = useState(initialHobbyTitles);
@@ -146,7 +148,7 @@ const EditProfile = ({
     setter(array.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e) => {
+  const handleCommonSubmit = async (e) => {
     e.preventDefault();
 
     const token = localStorage.getItem('token');
@@ -193,9 +195,6 @@ const EditProfile = ({
         ...learnLangChanges.removed.map(id => ({ language_id: id, is_known: false })),
       ],
     };
-    if (password != "") {
-      payload["password"] = password;
-    }
 
     const response = await api.patch(`/users/${userId}`, 
       payload,
@@ -227,13 +226,28 @@ const EditProfile = ({
     ));
   };
 
+  const State = Object.freeze({
+    COMMON: 0,
+    SECURITY: 1
+  });
+
+  const state = State.COMMON;
+
+  const handleSecuritySubmit = async () => {
+    const payload = {}
+    if (password != "") {
+      payload["password"] = password;
+    }
+  }
+
   return (
     <>
       <Header />
       <div className="profile-background">
         <div className="profile-card">
+          {state == State.COMMON ? (
           <div className="profile-content">
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleCommonSubmit}>
               {/* Color */}
               <div className="section name-section">
                 <div className="color-wrapper">
@@ -255,18 +269,6 @@ const EditProfile = ({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter nickname..."
                   className="name-input"
-                />
-              </div>
-              
-              {/* Password */}
-              <div className="section password-section">
-                <div className="section-title">Password</div>
-                <input
-                  type="text"
-                  className="password-input"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter new password... (won't change, if there is empty string)"
                 />
               </div>
 
@@ -399,42 +401,60 @@ const EditProfile = ({
                 </datalist>
             </form>
           </div>
-        </div>
+          ) : state = State.SEQURITY (
+          <div className="profile-content">
+            <form onSubmit={handleCommonSubmit}>
+              {/* Password */}
+              <div className="section password-section">
+                <div className="section-password">Password</div>
+                <input
+                  type="text"
+                  className="password-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter new password... (won't change, if there is empty string)"
+                />
+              </div>
 
-        {/* Modal for adding items (currently not used but can be extended) */}
-        {isOpen && (
-          <>
-            <div className="edit-background" onClick={closeModal} />
-            <div className="edit-card">
-              <form>
-                <div className="section">
-                  <div className="section-title">
-                    {openedParam === 'hobbies' && 'Хобби'}
-                    {openedParam === 'known_languages' && 'Знаю языки'}
-                    {openedParam === 'learn_languages' && 'Изучаю языки'}
-                  </div>
-                  <div className="chip-input-group">
-                    <input
-                      placeholder="Добавить..."
-                      className="chip-input"
-                      type="text"
-                    />
-                    <button type="button" className="chip-add-btn">+</button>
-                  </div>
-                  <div className="chips">
-                    {/* Dynamically render chips based on openedParam */}
-                  </div>
-                </div>
-                <div className="profile-footer" style={{ display: 'flex', gap: '16px' }}>
-                  <button type="submit" className="edit-btn">Сохранить изменения</button>
-                  <button type="button" className="edit-btn cancel-btn" onClick={closeModal}>
-                    Отмена
-                  </button>
-                </div>
-              </form>
-            </div>
-          </>
-        )}
+              {/* Password confirmation */}
+              <div className="section password-section">
+                <div className="section-password">Repeat</div>
+                <textarea
+                  className="description-textarea"
+                  value={description}
+                  onChange={(e) => setPasswordConfirmation(e.target.value)}
+                  placeholder="Enter new password again..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Footer buttons */}
+              <div className="profile-footer" style={{ display: 'flex', gap: '16px' }}>
+                <button type="submit" className="edit-btn">
+                  Save changes
+                </button>
+                <button type="button" className="edit-btn cancel-btn" onClick={onCancel}>
+                  Cancel
+                </button>
+                <button type="button" className="edit-btn signout-btn" onClick={onSignOut}>
+                  Sign out
+                </button>
+              </div>
+                <datalist id="hobbies-options">
+                  {allHobbies.map((item, index) => (
+                    <option value={item.title} />
+                  ))}
+                </datalist>
+                <datalist id="languages-options">
+                  {allLanguages.map((item, index) => (
+                    <option value={item.name} />
+                  ))}
+                </datalist>
+            </form>
+          </div>
+          
+          )}
+        </div>
       </div>
     </>
   );

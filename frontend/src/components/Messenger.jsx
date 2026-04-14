@@ -180,6 +180,11 @@ const Messenger = () => {
     scrollToBottom();
   }, [messages]);
 
+  const handleScroll = (e) => {
+    const {scrollTop, scrollHeight, clientHeight} = e.target;
+    console.log(e.target);
+  }
+
   return (
   <>
     {/* Верхняя панель */}
@@ -225,9 +230,9 @@ const Messenger = () => {
           style={{ maxHeight: '100%', flex: 1, overflowY: 'auto' }}
         >
 
-        <div className="messages">
+        <div className="messages" onScroll={handleScroll}>
 
-          {messages.map((msg, index) => (<div className={`message ${msg.user_id != user_id ? 'received' : 'sent'}`} key={msg.message_id}> {msg.content} </div>))}
+          {messages.map((msg, index) => (<div className={`message ${msg.user_id != user_id ? 'received' : 'sent'}`} key={msg.message_id}> {msg.content} <div className="message-time">{(parseInt(msg.created_at.split("T")[1].split("Z")[0].split(":")[0] - parseInt(new Date().getTimezoneOffset())/60)) + ":" + msg.created_at.split("T")[1].split("Z")[0].split(":")[1]}</div> </div>))}
           
           <div ref={bottomRef} />
         </div>

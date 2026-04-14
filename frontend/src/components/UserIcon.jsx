@@ -24,7 +24,7 @@ function UserIcon({ color, size=42 }) {
   };
 
   return (
-    <div class="profile-btn-bg" style={backgroundStyles}>
+    <div className="profile-btn-bg" style={backgroundStyles}>
         <button
           style={coloredStyle}
           className="profile-btn"

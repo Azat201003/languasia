@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import Logo from '../assets/Logo.svg';
 import "./Header.css";
-import api from "../api.jsx";
+import {api} from "../api.jsx";
 import UserIcon from "./UserIcon.jsx"
 import { redirect, useNavigate } from "react-router-dom";
 

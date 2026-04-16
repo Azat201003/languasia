@@ -429,12 +429,12 @@ func (dbc *DBController) GetMessagesInChat(request *MessagesRequest) ([]Message,
 	return messages, err
 }
 
-func (dbc *DBController) CreateMessage(message *Message) (time.Time, uint64, error) {
-	var result Message
+func (dbc *DBController) CreateMessage(message *Message) (Message, error) {
+    result := Message{}
 	err := dbc.db.Raw(`
-		INSERT INTO messages (chat_id, sender_id, content) VALUES (?, ?, ?) RETURNING created_at, message_id
+		INSERT INTO messages (chat_id, sender_id, content) VALUES (?, ?, ?) RETURNING *
 	`, message.ChatId, message.SenderId, message.Content).Scan(&result).Error
-	return result.CreatedAt, result.MessageId, err
+	return result, err  
 }
 
 func (dbc *DBController) DeleteMessage(messageId uint64) error {

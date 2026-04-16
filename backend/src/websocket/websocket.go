@@ -32,18 +32,10 @@ type Client struct {
 
 type WebSocketHub struct {
 	clients    map[uint64]*Client // by user_id
-	broadcast  chan Broadcast
+	broadcast  chan database.Message
 	register   chan *Client
 	unregister chan *Client
 	mutex      sync.RWMutex
-}
-
-type Broadcast struct {
-	ChatId    uint64    `json:"chat_id"`
-	UserId    uint64    `json:"user_id"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
-	MessageId uint64    `json:"message_id"`
 }
 
 type Message struct {
@@ -59,7 +51,7 @@ func NewHub() *WebSocketHub {
 	fmt.Println("Creating new hub")
 	return &WebSocketHub{
 		clients:    make(map[uint64]*Client),
-		broadcast:  make(chan Broadcast, 256),
+		broadcast:  make(chan database.Message, 256),
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
 	}
@@ -112,7 +104,7 @@ func (h *WebSocketHub) Run() {
 				fmt.Println("h.clients", h.clients)
 
 				containsUser = true
-				if !slices.Contains(userIds, broadcast.UserId) {
+				if !slices.Contains(userIds, broadcast.SenderId) {
 					containsUser = false
 				}
 
@@ -124,22 +116,22 @@ func (h *WebSocketHub) Run() {
 				}
 
 				if err != nil {
-					fmt.Printf("[HUB] Broadcasting failed: %v\n", err.Error())
+					fmt.Printf("[HUB] database.Messageing failed: %v\n", err.Error())
 				}
 			}
 
 			if !containsUser {
-				fmt.Println("[HUB] Broadcasting requested for user that isn't in chat")
+				fmt.Println("[HUB] database.Messageing requested for user that isn't in chat")
 				h.mutex.RUnlock()
 				continue
 			}
 
 			var err error
 
-			broadcast.CreatedAt, broadcast.MessageId, err = database.DBC.CreateMessage(&database.Message{
+			broadcast, err = database.DBC.CreateMessage(&database.Message{
 				Content:  broadcast.Content,
 				ChatId:   broadcast.ChatId,
-				SenderId: broadcast.UserId,
+				SenderId: broadcast.SenderId,
 			})
 
 			bytes, err := json.Marshal(broadcast)
@@ -172,7 +164,7 @@ func (h *WebSocketHub) Run() {
 			}
 			h.mutex.RUnlock()
 
-			fmt.Println("[HUB] Broadcast completed")
+			fmt.Println("[HUB] database.Message completed")
 		}
 	}
 }
@@ -233,9 +225,9 @@ func (c *Client) readPump(hub *WebSocketHub) {
 				fmt.Printf("[READ_PUMP] Error parsing message from %s: %v 2\n", c.user.Username, err)
 				continue
 			}
-			hub.broadcast <- Broadcast{
+			hub.broadcast <- database.Message{
 				ChatId:    chatMessage.ChatId,
-				UserId:    c.user.UserId,
+				SenderId:    c.user.UserId,
 				Content:   chatMessage.Content,
 				CreatedAt: time.Now(),
 				MessageId: 0,
@@ -268,18 +260,12 @@ func (c *Client) readPump(hub *WebSocketHub) {
 				}
 
 				if !containsUser {
-					fmt.Println("[READ_PUMP] Broadcasting requested for user that isn't in chat")
+					fmt.Println("[READ_PUMP] database.Messageing requested for user that isn't in chat")
 					return
 				}
 
 				for _, broadcast := range messages {
-					bytes, err := json.Marshal(Broadcast{
-						UserId:    broadcast.SenderId,
-						Content:   broadcast.Content,
-						ChatId:    broadcast.ChatId,
-						CreatedAt: broadcast.CreatedAt,
-						MessageId: broadcast.MessageId,
-					})
+					bytes, err := json.Marshal(broadcast)
 					if err != nil {
 						fmt.Printf("[READ_PUMP] Cannot marshal recieved message: %v\n", err.Error())
 					}

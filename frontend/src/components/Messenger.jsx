@@ -26,7 +26,7 @@ const Scroll = styled(SimpleBar)`
 `;
 
 
-function ChatList({ userid, activeChat, setActiveChat, setMessages, searchQuery }) {
+function ChatList({ userid, activeChat, setActiveChat, setChatMessages, searchQuery }) {
 
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,45 +73,60 @@ function ChatList({ userid, activeChat, setActiveChat, setMessages, searchQuery 
         </div>
         <div className="chat-time"></div>
       </div>)))}
-    </>
+      </>
   );
 }
 
 
 const Messenger = () => {
 
-  const [activeChat, setActiveChat] = useState(null);
+    const [activeChat, setActiveChat] = useState(null);
 
-  const [message, setMessage] = useState('');
+    const [message, setMessage] = useState('');
 
-  const [messages, setMessages] = useState([]);
+    const [chatMessages, setChatMessages] = useState({});
 
-  const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
-  const user_id = parseInt(localStorage.getItem('user_id'));
-  const token = localStorage.getItem('token');
+    const user_id = parseInt(localStorage.getItem('user_id'));
+    const token = localStorage.getItem('token');
 
-  
 
-  // const websocket = useRef(new WebSocket(`${ws_url}/ws` + `?access_token=${token}`));
-  const websocket = useRef(null);
 
-  useEffect(() => {
-    const ws = new WebSocket(`${ws_url}/ws?access_token=${token}`);
-  
-    websocket.current = ws;
+    // const websocket = useRef(new WebSocket(`${ws_url}/ws` + `?access_token=${token}`));
+    const websocket = useRef(null);
 
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-    };
+    useEffect(() => {
+        const ws = new WebSocket(`${ws_url}/ws?access_token=${token}`);
 
-    websocket.current.onmessage = (event) => {
-      if (event.data.chat_id && event.data.chat_id !== activeChat?.chat_id) return;
+        websocket.current = ws;
 
-      const newMessage = JSON.parse(event.data);
+        ws.onopen = () => {
+            console.log('WebSocket connected');
+        };
 
-      if (newMessage.type != "pong") {
-        setMessages(prev => [newMessage, ...prev].sort((a, b) => a.message_id - b.message_id));
+        websocket.current.onmessage = (event) => {
+            if (event.data.chat_id && event.data.chat_id !== activeChat?.chat_id) return;
+
+            const newMessage = JSON.parse(event.data);
+
+            if (newMessage.type != "pong") {
+                setChatMessages(newChatMessages =>{
+
+	var newChatMessages = chatMessages
+	if (chatMessages[newMessage.chat_id] == undefined) {
+		chatMessages[newMessage.chat_id] = []
+	}
+	const index = newChatMessages[newMessage.chat_id].findIndex(x => x.message_id > newMessage.message_id);
+      	if (index === -1) {
+	  newChatMessages[newMessage.chat_id].push(newMessage);
+	} else {
+	  newChatMessages[newMessage.chat_id].splice(index, 0, newMessage);
+	}
+          })
+
+	//chatMessages[newMessage.chat_id] = [..chatMessages[newMessage.chat_id]]
+        //setChatMessages(prev => [newMessage, ...prev].sort((a, b) => a.message_id - b.message_id));
       }
     }
 
@@ -154,19 +169,22 @@ const Messenger = () => {
       limit: 50
     };
     websocket.current.send(JSON.stringify(loadChatMessage));
+		console.log(chatMessages, activeChat, chatMessages[activeChat]);
   }
 
   // console.log(setTimeout((e) => loadChat(e, 6), 2000));
 
   useEffect(() => {
     if (activeChat) {
-      setMessages([]);
+      if (chatMessages[activeChat.chat_id] == undefined)
+      setChatMessages(prev => ({ ...prev, [activeChat.chat_id]: [] }));
 
-      console.log("some", messages);
+      console.log("some", chatMessages);
 
       loadChat(activeChat.chat_id);
 
     }
+	console.log(chatMessages, activeChat, chatMessages[activeChat]);
   }, [activeChat]);
 
   
@@ -178,7 +196,7 @@ const Messenger = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [chatMessages]);
 
   const handleScroll = (e) => {
     const {scrollTop, scrollHeight, clientHeight} = e.target;
@@ -209,7 +227,7 @@ const Messenger = () => {
           style={{ maxHeight: '100%', flex: 1, overflowY: 'auto' }}
         >
         <div className="chats-list">
-          <ChatList userid={user_id} activeChat={activeChat} setActiveChat={setActiveChat} setMessages={setMessages} searchQuery={searchQuery}/>
+          <ChatList userid={user_id} activeChat={activeChat} setActiveChat={setActiveChat} setChatMessages={setChatMessages} searchQuery={searchQuery}/>
         </div>
         </Scroll>
       </aside>
@@ -232,7 +250,7 @@ const Messenger = () => {
 
         <div className="messages" onScroll={handleScroll}>
 
-          {messages.map((msg, index) => (<div className={`message ${msg.user_id != user_id ? 'received' : 'sent'}`} key={msg.message_id}> {msg.content} <div className="message-time">{(parseInt(msg.created_at.split("T")[1].split("Z")[0].split(":")[0] - parseInt(new Date().getTimezoneOffset())/60)) + ":" + msg.created_at.split("T")[1].split("Z")[0].split(":")[1]}</div> </div>))}
+          {(chatMessages[activeChat.chat_id]||[]).map((msg, index) => (<div className={`message ${msg.sender_id != user_id ? 'received' : 'sent'}`} key={msg.message_id}> {msg.content} <div className="message-time">{(parseInt(msg.created_at.split("T")[1].split("Z")[0].split(":")[0] - parseInt(new Date().getTimezoneOffset())/60)) + ":" + msg.created_at.split("T")[1].split("Z")[0].split(":")[1]}</div> </div>))}
           
           <div ref={bottomRef} />
         </div>
